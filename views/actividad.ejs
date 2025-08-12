@@ -1,0 +1,403 @@
+<%- include ('Plantilla/Inicio') %>
+    <!-- === ACTIVIDAD: KPIs + Filtros + Timeline + Tabla + Modal === -->
+<section id="actividad" class="space-y-6">
+
+  <!-- Encabezado y acciones -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h2 class="text-xl md:text-2xl font-semibold text-gray-900">Actividad reciente</h2>
+      <p class="text-sm text-gray-500">Eventos de acceso, aperturas manuales e incidencias del sistema.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnExport" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Exportar CSV</button>
+      <button id="btnRefresh" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Actualizar</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Eventos (24h)</div>
+      <div id="kpiTotal" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Correctos</div>
+      <div id="kpiOk" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <div id="kpiOkDelta" class="text-xs text-green-600 mt-1">—</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Denegados</div>
+      <div id="kpiFail" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <div id="kpiFailTop" class="text-xs text-gray-500 mt-1">—</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Aperturas manuales</div>
+      <div id="kpiManual" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Prom. tiempo verificación</div>
+      <div id="kpiLatency" class="mt-1 text-2xl font-semibold text-gray-900">—</div>
+      <!-- rellena con ms o s si lo manejas -->
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="bg-white rounded-2xl border border-gray-200 p-4">
+    <form id="filters" class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <label class="md:col-span-4">
+        <span class="sr-only">Buscar</span>
+        <input id="fQ" type="text" placeholder="Buscar: nombre, correo, ID, motivo…"
+               class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Rango</span>
+        <select id="fRange" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="hoy">Hoy</option>
+          <option value="24h">Últimas 24h</option>
+          <option value="semana">Esta semana</option>
+          <option value="mes">Este mes</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Evento</span>
+        <select id="fTipo" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Evento (todos)</option>
+          <option value="entrada">Entrada</option>
+          <option value="salida">Salida</option>
+          <option value="manual">Apertura manual</option>
+          <option value="denegado">Acceso denegado</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Estado</span>
+        <select id="fEstado" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Estado (todos)</option>
+          <option value="ok">Correcto</option>
+          <option value="fail">Denegado</option>
+        </select>
+      </label>
+      <label class="md:col-span-2">
+        <span class="sr-only">Dispositivo</span>
+        <select id="fDevice" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Dispositivo (todos)</option>
+          <option value="T-01">Torniquete 1</option>
+          <option value="T-02">Torniquete 2</option>
+          <option value="PU-01">Puerta principal</option>
+          <!-- llena dinámicamente -->
+        </select>
+      </label>
+      <div class="md:col-span-12 flex items-center gap-2">
+        <button id="btnFilter" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Aplicar</button>
+        <button id="btnClear" type="button" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Limpiar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Vista combinada: Timeline + Tabla -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+    <!-- Timeline (tarjetas ricas) -->
+    <div class="bg-white rounded-2xl border border-gray-200 p-4">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="text-lg font-semibold text-gray-900">Timeline</h3>
+        <span id="tlCount" class="text-sm text-gray-500">0 eventos</span>
+      </div>
+      <ol id="timeline" class="relative ml-4 border-l border-gray-200">
+        <!-- JS renderiza <li> aquí -->
+        <!-- Cada item muestra: avatar, nombre, evento, hora, dispositivo, método (NFC/PIN), resultado (ok/fail), motivo, ubicación, operador, id/audit -->
+      </ol>
+    </div>
+
+    <!-- Tabla (compacta con encabezado fijo) -->
+    <div class="bg-white rounded-2xl border border-gray-200">
+      <div class="p-4 flex items-center justify-between">
+        <h3 class="text-lg font-semibold text-gray-900">Tabla</h3>
+        <div class="text-sm text-gray-500">Orden: reciente ⟶ antiguo</div>
+      </div>
+      <div class="overflow-auto max-h-[540px]">
+        <table class="min-w-full text-sm">
+          <thead class="sticky top-0 bg-gray-50 text-gray-600 border-b border-gray-200">
+            <tr>
+              <th class="px-4 py-2 text-left">Empleado</th>
+              <th class="px-4 py-2 text-left">Evento</th>
+              <th class="px-4 py-2 text-left">Fecha/Hora</th>
+              <th class="px-4 py-2 text-left">Dispositivo</th>
+              <th class="px-4 py-2 text-left">Método</th>
+              <th class="px-4 py-2 text-left">Estado</th>
+              <th class="px-4 py-2 text-right">Detalles</th>
+            </tr>
+          </thead>
+          <tbody id="tbody" class="divide-y divide-gray-100 text-gray-700">
+            <!-- JS renderiza filas -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginación -->
+      <div class="p-4 flex items-center justify-between">
+        <p id="pageInfo" class="text-sm text-gray-500">Mostrando 0–0 de 0</p>
+        <div class="flex items-center gap-2">
+          <button id="prev" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Anterior</button>
+          <button id="next" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Detalles -->
+  <dialog id="dlg" class="rounded-2xl backdrop:bg-black/40 w-full max-w-2xl p-0">
+    <div class="bg-white rounded-2xl overflow-hidden">
+      <header class="px-5 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h4 id="dlgTitle" class="text-lg font-semibold text-gray-900">Detalle del evento</h4>
+        <button id="dlgClose" class="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50">✕</button>
+      </header>
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+        <!-- Col 1 -->
+        <div class="space-y-2">
+          <div><span class="text-gray-500">Empleado:</span> <span id="dEmpleado" class="font-medium text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Puesto:</span> <span id="dPuesto" class="text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Evento:</span> <span id="dEvento" class="text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Resultado:</span> <span id="dEstado" class="text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Motivo:</span> <span id="dMotivo" class="text-gray-900">—</span></div>
+        </div>
+        <!-- Col 2 -->
+        <div class="space-y-2">
+          <div><span class="text-gray-500">Fecha/Hora:</span> <span id="dFecha" class="text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Dispositivo:</span> <span id="dDevice" class="text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Método:</span> <span id="dMetodo" class="text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Ubicación:</span> <span id="dUbicacion" class="text-gray-900">—</span></div>
+          <div><span class="text-gray-500">Audit ID:</span> <span id="dAudit" class="text-gray-900">—</span></div>
+        </div>
+      </div>
+      <footer class="px-5 py-4 border-t border-gray-200 flex items-center justify-end gap-2">
+        <button id="dlgOk" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Aceptar</button>
+      </footer>
+    </div>
+  </dialog>
+</section>
+
+<script>
+/* ========= FRONTEND PURO (sin backend) =========
+   Reemplaza DATA por tu respuesta real. Mantén las mismas claves.
+   Campos sugeridos por evento:
+   {
+     id, empleado, puesto, avatar, evento ('entrada'|'salida'|'manual'|'denegado'),
+     fecha, // 2025-08-12 09:41:00
+     deviceId, deviceName, metodo ('NFC'|'PIN'|'App'|'Reconocimiento'),
+     estado ('ok'|'fail'), motivo, ubicacion, operador, auditId
+   }
+*/
+const DATA = [
+  {
+    id: 'EVT-1001', empleado: 'Juan Pérez', puesto: 'Operador',
+    avatar: '/img/user-placeholder.jpg', evento: 'entrada',
+    fecha: '2025-08-12 08:30:10', deviceId: 'T-01', deviceName: 'Torniquete 1',
+    metodo: 'NFC', estado: 'ok', motivo: '', ubicacion: 'Recepción', operador: 'Sistema',
+    auditId: 'A-9F31'
+  },
+  {
+    id: 'EVT-1002', empleado: 'María López', puesto: 'Seguridad',
+    avatar: '/img/user-placeholder.jpg', evento: 'denegado',
+    fecha: '2025-08-12 08:45:02', deviceId: 'PU-01', deviceName: 'Puerta principal',
+    metodo: 'NFC', estado: 'fail', motivo: 'Sin permiso de zona', ubicacion: 'Acceso principal', operador: 'Sistema',
+    auditId: 'A-9F32'
+  },
+  {
+    id: 'EVT-1003', empleado: 'Admin', puesto: 'Administrador',
+    avatar: '/img/avatar-admin.png', evento: 'manual',
+    fecha: '2025-08-12 09:05:12', deviceId: 'T-01', deviceName: 'Torniquete 1',
+    metodo: 'App', estado: 'ok', motivo: 'Apertura remota', ubicacion: 'Recepción', operador: 'Admin',
+    auditId: 'A-9F33'
+  }
+];
+
+// Estado UI
+let page = 1, size = 8;
+let q = '', range = '24h', tipo = '', estado = '', device = '';
+
+// Utils
+const $ = (q) => document.querySelector(q);
+const $$ = (q) => document.querySelectorAll(q);
+const fmtBadge = (ok) =>
+  `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}">
+     <span class="w-1.5 h-1.5 rounded-full ${ok ? 'bg-green-600' : 'bg-red-600'} mr-2"></span>${ok ? 'Correcto' : 'Denegado'}
+   </span>`;
+const iconFor = (ev) => {
+  if (ev === 'entrada') return '➡️';
+  if (ev === 'salida') return '⬅️';
+  if (ev === 'manual') return '🔓';
+  return '⛔';
+};
+
+// Filtro local (demo). Reemplaza por paginado desde backend si gustas.
+function getFiltered() {
+  return DATA.filter(r => {
+    const str = (r.empleado + r.puesto + r.deviceName + r.motivo + r.auditId).toLowerCase();
+    const byQ = q ? str.includes(q.toLowerCase()) : true;
+    const byTipo = tipo ? r.evento === tipo : true;
+    const byEstado = estado ? (estado === 'ok' ? r.estado === 'ok' : r.estado === 'fail') : true;
+    const byDevice = device ? r.deviceId === device : true;
+    // Nota: el rango solo es UI en demo. Con backend, filtra por fecha.
+    return byQ && byTipo && byEstado && byDevice;
+  }).sort((a,b) => b.fecha.localeCompare(a.fecha));
+}
+
+// Render KPIs
+function renderKpis(rows) {
+  $('#kpiTotal').textContent = rows.length;
+  const ok = rows.filter(r => r.estado === 'ok').length;
+  const fail = rows.filter(r => r.estado === 'fail').length;
+  const manual = rows.filter(r => r.evento === 'manual').length;
+  $('#kpiOk').textContent = ok;
+  $('#kpiFail').textContent = fail;
+  $('#kpiManual').textContent = manual;
+  // Placeholders de insights
+  $('#kpiOkDelta').textContent = ok ? `Tasa éxito ${(ok/Math.max(1,rows.length)*100).toFixed(0)}%` : '—';
+  const topReason = rows.filter(r=>r.estado==='fail').reduce((acc,r)=>{
+    acc[r.motivo||'—']= (acc[r.motivo||'—']||0)+1; return acc;
+  },{});
+  const top = Object.entries(topReason).sort((a,b)=>b[1]-a[1])[0];
+  $('#kpiFailTop').textContent = top ? `Motivo común: ${top[0]}` : '—';
+  $('#kpiLatency').textContent = '—';
+}
+
+// Render timeline
+function renderTimeline(rows) {
+  const c = $('#timeline');
+  c.innerHTML = '';
+  rows.slice(0, 12).forEach(r => {
+    const li = document.createElement('li');
+    li.className = 'mb-6 ml-3';
+    li.innerHTML = `
+      <span class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full ${r.estado==='ok'?'bg-green-500':'bg-red-500'}"></span>
+      <div class="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+        <div class="flex items-start justify-between">
+          <div class="flex items-center">
+            <img src="${r.avatar || '/img/user-placeholder.jpg'}" class="w-10 h-10 rounded-lg border border-gray-200 object-cover" alt="">
+            <div class="ml-3">
+              <div class="font-medium text-gray-900">${r.empleado}</div>
+              <div class="text-xs text-gray-500">${r.puesto}</div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-sm text-gray-900">${iconFor(r.evento)} ${r.evento.charAt(0).toUpperCase()+r.evento.slice(1)}</div>
+            <div class="text-xs text-gray-500">${r.fecha}</div>
+          </div>
+        </div>
+
+        <dl class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">
+          <div><dt class="text-gray-500">Dispositivo</dt><dd class="text-gray-900 font-medium">${r.deviceName} (${r.deviceId})</dd></div>
+          <div><dt class="text-gray-500">Método</dt><dd class="text-gray-900">${r.metodo}</dd></div>
+          <div><dt class="text-gray-500">Resultado</dt><dd>${fmtBadge(r.estado==='ok')}</dd></div>
+          <div><dt class="text-gray-500">Motivo</dt><dd class="text-gray-900">${r.motivo || '—'}</dd></div>
+          <div><dt class="text-gray-500">Ubicación</dt><dd class="text-gray-900">${r.ubicacion || '—'}</dd></div>
+          <div><dt class="text-gray-500">Operador</dt><dd class="text-gray-900">${r.operador || 'Sistema'}</dd></div>
+          <div><dt class="text-gray-500">Audit ID</dt><dd class="text-gray-900">${r.auditId || '—'}</dd></div>
+        </dl>
+
+        <div class="mt-4 flex items-center gap-2">
+          <button data-id="${r.id}" class="btn-detalle px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Ver detalle</button>
+          <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Ver empleado</button>
+          <button class="ml-auto px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">Acción rápida</button>
+        </div>
+      </div>
+    `;
+    c.appendChild(li);
+  });
+  $('#tlCount').textContent = `${Math.min(rows.length,12)} de ${rows.length} eventos`;
+}
+
+// Render tabla + paginación
+function renderTable(rows) {
+  const start = (page-1)*size, end = start + size;
+  const slice = rows.slice(start, end);
+  const tb = $('#tbody');
+  tb.innerHTML = '';
+  slice.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="px-4 py-2">
+        <div class="flex items-center">
+          <img src="${r.avatar || '/img/user-placeholder.jpg'}" class="w-8 h-8 rounded-lg border border-gray-200 object-cover" alt="">
+          <div class="ml-2">
+            <div class="font-medium text-gray-900">${r.empleado}</div>
+            <div class="text-xs text-gray-500">${r.puesto}</div>
+          </div>
+        </div>
+      </td>
+      <td class="px-4 py-2 capitalize">${r.evento}</td>
+      <td class="px-4 py-2">${r.fecha}</td>
+      <td class="px-4 py-2">${r.deviceName}</td>
+      <td class="px-4 py-2">${r.metodo}</td>
+      <td class="px-4 py-2">${fmtBadge(r.estado==='ok')}</td>
+      <td class="px-4 py-2 text-right">
+        <button data-id="${r.id}" class="btn-detalle px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Detalle</button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+  $('#pageInfo').textContent = `Mostrando ${rows.length ? start+1 : 0}–${Math.min(end, rows.length)} de ${rows.length}`;
+  $('#prev').disabled = page === 1;
+  $('#next').disabled = end >= rows.length;
+
+  // bind detalles
+  $$('.btn-detalle').forEach(btn => btn.addEventListener('click', () => openDetail(rows.find(r=>r.id===btn.dataset.id))));
+}
+
+// Modal detalle
+function openDetail(r) {
+  if (!r) return;
+  $('#dEmpleado').textContent = r.empleado;
+  $('#dPuesto').textContent = r.puesto || '—';
+  $('#dEvento').textContent = r.evento;
+  $('#dEstado').innerHTML = r.estado==='ok' ? 'Correcto' : 'Denegado';
+  $('#dMotivo').textContent = r.motivo || '—';
+  $('#dFecha').textContent = r.fecha;
+  $('#dDevice').textContent = `${r.deviceName} (${r.deviceId})`;
+  $('#dMetodo').textContent = r.metodo || '—';
+  $('#dUbicacion').textContent = r.ubicacion || '—';
+  $('#dAudit').textContent = r.auditId || '—';
+  const dlg = $('#dlg'); dlg.showModal();
+}
+$('#dlgClose')?.addEventListener('click', ()=> $('#dlg').close());
+$('#dlgOk')?.addEventListener('click', ()=> $('#dlg').close());
+
+// Eventos UI
+$('#btnFilter').addEventListener('click', (e)=>{
+  e.preventDefault();
+  q = $('#fQ').value.trim();
+  range = $('#fRange').value; // integrar en backend
+  tipo = $('#fTipo').value;
+  estado = $('#fEstado').value;
+  device = $('#fDevice').value;
+  page = 1;
+  refresh();
+});
+$('#btnClear').addEventListener('click', ()=>{
+  $('#filters').reset(); q=''; range='24h'; tipo=''; estado=''; device=''; page=1; refresh();
+});
+$('#prev').addEventListener('click', ()=>{ page=Math.max(1,page-1); refresh(); });
+$('#next').addEventListener('click', ()=>{ page=page+1; refresh(); });
+$('#btnRefresh').addEventListener('click', refresh);
+$('#btnExport').addEventListener('click', ()=>{
+  const rows = getFiltered();
+  const csv = ['id,empleado,puesto,evento,fecha,deviceId,deviceName,metodo,estado,motivo,ubicacion,operador,auditId']
+    .concat(rows.map(r => [
+      r.id, r.empleado, r.puesto, r.evento, r.fecha, r.deviceId, r.deviceName, r.metodo, r.estado, (r.motivo||''), (r.ubicacion||''), (r.operador||''), (r.auditId||'')
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')))
+    .join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'actividad.csv'; a.click();
+});
+
+// Ciclo de render
+function refresh(){
+  const filtered = getFiltered();
+  renderKpis(filtered);
+  renderTimeline(filtered);
+  renderTable(filtered);
+}
+refresh();
+</script>
+
+<%- include ('Plantilla/Final') %>

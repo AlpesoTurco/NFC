@@ -1,0 +1,235 @@
+<%- include ('Plantilla/Inicio') %>
+<!-- Encabezado + Acciones -->
+  <section class="mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <h1 class="text-xl md:text-2xl font-semibold text-gray-900">Usuarios</h1>
+        <p class="text-sm text-gray-500">Listado de usuarios registrados en el sistema.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- ACCIÓN: Exportar -->
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+          Exportar CSV
+        </button>
+        <!-- ACCIÓN: Nuevo usuario -->
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+          Nuevo usuario
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Total</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- Rellena con total de usuarios -->
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Activos</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- Rellena con usuarios activos -->
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Pendientes</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- Rellena con usuarios en estado pendiente -->
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Desactivados</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- Rellena con usuarios desactivados -->
+    </div>
+  </section>
+
+  <!-- Filtros / Búsqueda -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+    <form class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <!-- BÚSQUEDA -->
+      <label class="md:col-span-5">
+        <span class="sr-only">Buscar</span>
+        <input type="text" placeholder="Buscar por nombre, correo o empleado..."
+               class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        <!-- Conecta al backend: q= -->
+      </label>
+
+      <!-- ROL -->
+      <label class="md:col-span-2">
+        <span class="sr-only">Rol</span>
+        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Rol (todos)</option>
+          <option>Administrador</option>
+          <option>Supervisor</option>
+          <option>Operador</option>
+          <!-- Rellena dinámicamente -->
+        </select>
+        <!-- Conecta al backend: role= -->
+      </label>
+
+      <!-- ESTADO -->
+      <label class="md:col-span-2">
+        <span class="sr-only">Estado</span>
+        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Estado (todos)</option>
+          <option>Activo</option>
+          <option>Pendiente</option>
+          <option>Desactivado</option>
+        </select>
+        <!-- Conecta al backend: status= -->
+      </label>
+
+      <!-- DEPARTAMENTO -->
+      <label class="md:col-span-2">
+        <span class="sr-only">Departamento</span>
+        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Departamento (todos)</option>
+          <option>RH</option>
+          <option>Sistemas</option>
+          <option>Operaciones</option>
+          <!-- Rellena dinámicamente -->
+        </select>
+        <!-- Conecta al backend: dept= -->
+      </label>
+
+      <!-- BOTÓN FILTRAR -->
+      <div class="md:col-span-1 flex">
+        <button class="w-full rounded-lg bg-blue-600 text-white text-sm font-medium px-3 py-2 hover:bg-blue-700">
+          Filtrar
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Lista de usuarios (Grid de tarjetas) -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    <!-- Repite este bloque por cada usuario -->
+    <article class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center">
+          <!-- AVATAR -->
+          <img src="/resources/img/Usuario 2.svg" alt="" class="w-14 h-14 rounded-xl border border-gray-200 object-cover">
+          <div class="ml-4">
+            <!-- NOMBRE -->
+            <h3 class="text-gray-900 font-semibold leading-tight">Nombre del usuario</h3>
+            <!-- CORREO -->
+            <p class="text-sm text-gray-500">correo@empresa.com</p>
+            <!-- ID EMPLEADO / RFC / CURP (elige lo que uses) -->
+            <p class="text-xs text-gray-400 mt-0.5">ID Empleado: 0000</p>
+          </div>
+        </div>
+        <!-- ESTADO -->
+        <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+          Activo
+        </span>
+        <!-- Alternativas: Pendiente (bg-yellow-50 text-yellow-700 ...), Desactivado (bg-red-50 text-red-700 ...) -->
+      </div>
+
+      <!-- METADATOS -->
+      <dl class="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 text-sm">
+        <div>
+          <dt class="text-gray-500">Rol</dt>
+          <dd class="text-gray-900 font-medium">Operador</dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Departamento</dt>
+          <dd class="text-gray-900 font-medium">Sistemas</dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Teléfono</dt>
+          <dd class="text-gray-900">+52 33 0000 0000</dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Último acceso</dt>
+          <dd class="text-gray-900">2025-08-11 08:30</dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Horario</dt>
+          <dd class="text-gray-900">L a V · 9:00–18:00</dd>
+        </div>
+        <div>
+          <dt class="text-gray-500">Dispositivo habitual</dt>
+          <dd class="text-gray-900">Torniquete 1</dd>
+        </div>
+      </dl>
+
+      <!-- TAGS / Permisos / Grupos -->
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">NFC</span>
+        <span class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">Acceso nocturno</span>
+        <span class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">Zona A</span>
+        <!-- Rellena dinámicamente según permisos o grupos -->
+      </div>
+
+      <!-- ACCIONES -->
+      <div class="mt-5 flex items-center gap-2">
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+          Ver
+        </button>
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+          Editar
+        </button>
+        <button class="ml-auto px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+          Registrar entrada
+        </button>
+      </div>
+    </article>
+    <!-- /Repite tarjeta -->
+  </section>
+
+  <!-- Paginación -->
+  <nav class="mt-6 flex items-center justify-between gap-3">
+    <p class="text-sm text-gray-500">
+      Mostrando 0–0 de 0 usuarios
+      <!-- Rellena con rango y total (ej. 1–12 de 134) -->
+    </p>
+    <div class="flex items-center gap-2">
+      <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Anterior</button>
+      <div class="hidden sm:flex items-center gap-1">
+        <!-- Rellena dinámicamente -->
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm">1</button>
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">2</button>
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">3</button>
+      </div>
+      <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Siguiente</button>
+    </div>
+  </nav>
+
+  <!-- (Opcional) Tabla compacta alternativa: cambia 'hidden' por 'block' si prefieres tabla -->
+  <section class="hidden mt-6 bg-white rounded-2xl border border-gray-200 p-4">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600">
+          <tr>
+            <th class="px-4 py-2 text-left">Empleado</th>
+            <th class="px-4 py-2 text-left">Correo</th>
+            <th class="px-4 py-2 text-left">Rol</th>
+            <th class="px-4 py-2 text-left">Departamento</th>
+            <th class="px-4 py-2 text-left">Estado</th>
+            <th class="px-4 py-2 text-left">Último acceso</th>
+            <th class="px-4 py-2 text-left"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr>
+            <td class="px-4 py-2">Nombre del usuario</td>
+            <td class="px-4 py-2">correo@empresa.com</td>
+            <td class="px-4 py-2">Operador</td>
+            <td class="px-4 py-2">Sistemas</td>
+            <td class="px-4 py-2">
+              <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Activo</span>
+            </td>
+            <td class="px-4 py-2">2025-08-11 08:30</td>
+            <td class="px-4 py-2">
+              <div class="flex gap-2">
+                <button class="px-2 py-1 rounded border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Ver</button>
+                <button class="px-2 py-1 rounded border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Editar</button>
+              </div>
+            </td>
+          </tr>
+          <!-- Repite filas -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+<%- include ('Plantilla/Final') %>

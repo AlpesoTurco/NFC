@@ -1,0 +1,20 @@
+</main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+    document.getElementById('openGateBtn').addEventListener('click', () => {
+      Swal.fire({
+        title: '¿Abrir torniquete?',
+        text: 'Se enviará un comando inmediato.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, abrir',
+        cancelButtonText: 'Cancelar'
+      });
+    });
+  </script>
+</body>
+</html>

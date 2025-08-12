@@ -19,7 +19,7 @@ const { Session } = require('express-session');
 
 const session = require ('express-session');
 app.use(session({
-    secret: 'secret',
+    secret: 'secret',   
     resave: true,
     saveUninitialized: true
 }))

@@ -6,11 +6,20 @@ const connections = require ('./database/db');
 router.get('/login', (req, res) => {
     res.render('login');
 });
-router.get('/register', (req, res) => {
-    res.render('register');
+router.get('/index', (req, res) => {
+    res.render('index');
 });
-router.get('/Busqueda', (req, res) => {
-    res.render('Busqueda');
+router.get('/usuarios', (req, res) => {
+    res.render('usuarios');
+});
+router.get('/dispositivos', (req, res) => {
+    res.render('dispositivos');
+});
+router.get('/actividad', (req, res) => {
+    res.render('actividad');
+});
+router.get('/configuracion', (req, res) => {
+    res.render('configuracion');
 });
 
 
@@ -31,7 +40,7 @@ router.get('/edit/:PersonaID', (req, res)=>{
 
 router.get('/delete/:PersonaID', (req, res)=>{
     const id = req.params.PersonaID;
-    connections.query('UPDATE Estudiante SET Estatus = 0 WHERE PersonaFK = ?', [id], (error, results)=>{
+    connections.query('UPDATE estudiante SET Estatus = 0 WHERE PersonaFK = ?', [id], (error, results)=>{
         if(error){
             throw error;
         } else {

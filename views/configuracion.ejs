@@ -1,0 +1,348 @@
+<%- include ('Plantilla/Inicio') %>
+  <!-- Encabezado -->
+  <header class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <h1 class="text-xl md:text-2xl font-semibold text-gray-900">Configuración del Torniquete</h1>
+      <p class="text-sm text-gray-500">Administra puertas, reglas, horarios, políticas y credenciales.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnSync" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Sincronizar</button>
+      <button id="btnGuardar" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Guardar cambios</button>
+    </div>
+  </header>
+
+  <!-- Selección de puerta -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-4">
+    <h2 class="text-lg font-semibold text-gray-900 mb-3">Puerta / Torniquete</h2>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <label class="md:col-span-4">
+        <span class="text-sm text-gray-700">Puerta</span>
+        <select id="doorSelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+          <!-- Llenar con GET /api/v1/developer/doors -->
+          <option value="door-id-demo">Torniquete 1 (DEMO)</option>
+        </select>
+      </label>
+      <div class="md:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
+        <button id="btnUnlock" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Desbloquear ahora</button>
+        <button id="btnRuleLock" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Mantener bloqueado</button>
+        <button id="btnRuleUnlock" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Mantener desbloqueado</button>
+        <button id="btnRuleCustom" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Desbloqueo temporal…</button>
+      </div>
+    </div>
+
+    <!-- Estado actual -->
+    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-xs text-gray-500">Relé</div>
+        <div id="relayStatus" class="text-sm font-medium text-gray-900">—</div>
+      </div>
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-xs text-gray-500">Posición de puerta</div>
+        <div id="dps" class="text-sm font-medium text-gray-900">—</div>
+      </div>
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-xs text-gray-500">Regla de bloqueo</div>
+        <div id="lockRule" class="text-sm font-medium text-gray-900">—</div>
+      </div>
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-xs text-gray-500">Termina</div>
+        <div id="lockEnds" class="text-sm font-medium text-gray-900">—</div>
+      </div>
+    </div>
+
+    <!-- Emergencia -->
+    <div class="mt-4 border-t border-gray-100 pt-4">
+      <h3 class="text-sm font-semibold text-gray-900 mb-2">Emergencia (todas las puertas)</h3>
+      <div class="flex flex-wrap gap-2">
+        <button id="btnLockdown" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Lockdown</button>
+        <button id="btnEvac" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Evacuación</button>
+        <button id="btnEmergReset" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Restaurar</button>
+        <span id="emergStatus" class="text-sm text-gray-500 ml-auto">Estado: —</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Horarios y Festivos -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-4">
+    <h2 class="text-lg font-semibold text-gray-900 mb-3">Horarios & Festivos</h2>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <label class="md:col-span-4">
+        <span class="text-sm text-gray-700">Horario (Schedule)</span>
+        <select id="scheduleSelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+          <!-- Llenar con GET /api/v1/developer/access_policies/schedules -->
+          <option value="">(Selecciona un horario)</option>
+        </select>
+      </label>
+      <label class="md:col-span-4">
+        <span class="text-sm text-gray-700">Grupo de festivos</span>
+        <select id="holidaySelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+          <!-- Llenar con GET /api/v1/developer/access_policies/holiday_groups -->
+          <option value="">(Ninguno / “No Holidays”)</option>
+        </select>
+      </label>
+      <div class="md:col-span-4 flex items-end gap-2">
+        <button id="btnNewSchedule" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Nuevo horario</button>
+        <button id="btnEditSchedule" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Editar</button>
+        <button id="btnDelSchedule" class="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50">Eliminar</button>
+      </div>
+    </div>
+
+    <!-- Editor simple de franjas -->
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-sm font-medium text-gray-900 mb-2">Semana</div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <!-- Repite para todos los días; demo con L-V -->
+          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+            <span>Lunes</span>
+            <input id="mon" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
+          </label>
+          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+            <span>Martes</span>
+            <input id="tue" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
+          </label>
+          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+            <span>Miércoles</span>
+            <input id="wed" type="text" placeholder="09:00-18:00" class="w-36 text-right focus:outline-none">
+          </label>
+          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+            <span>Jueves</span>
+            <input id="thu" type="text" placeholder="—" class="w-36 text-right focus:outline-none">
+          </label>
+          <label class="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-2">
+            <span>Viernes</span>
+            <input id="fri" type="text" placeholder="09:00-17:00" class="w-36 text-right focus:outline-none">
+          </label>
+        </div>
+      </div>
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-sm font-medium text-gray-900 mb-2">Festivos</div>
+        <div class="flex items-center gap-2">
+          <input id="hol1" type="text" placeholder="10:00-14:00; 16:00-18:00" class="flex-1 bg-white border border-gray-200 rounded-lg px-2 py-2 text-xs focus:outline-none">
+          <button id="btnApplyHoliday" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-xs font-medium hover:bg-blue-700">Aplicar</button>
+        </div>
+        <p class="text-xs text-gray-500 mt-2">Usa formato HH:mm–HH:mm separado por coma para múltiples franjas.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Políticas de acceso -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-4">
+    <h2 class="text-lg font-semibold text-gray-900 mb-3">Políticas de acceso</h2>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <label class="md:col-span-4">
+        <span class="text-sm text-gray-700">Política</span>
+        <select id="policySelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+          <!-- Llenar con GET /api/v1/developer/access_policies -->
+          <option value="">(Selecciona)</option>
+        </select>
+      </label>
+      <label class="md:col-span-4">
+        <span class="text-sm text-gray-700">Horario asignado</span>
+        <select id="policySchedule" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+          <!-- schedule_id de la política -->
+          <option value="">(Ninguno)</option>
+        </select>
+      </label>
+      <label class="md:col-span-4">
+        <span class="text-sm text-gray-700">Recursos (puertas / grupos)</span>
+        <input id="policyResources" placeholder='["door-id","door-group-id"]' class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+      </label>
+    </div>
+    <div class="mt-3 flex items-center gap-2">
+      <button id="btnNewPolicy" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Nueva</button>
+      <button id="btnSavePolicy" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Guardar</button>
+      <button id="btnDelPolicy" class="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50">Eliminar</button>
+    </div>
+  </section>
+
+  <!-- Credenciales: PIN & NFC -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-4">
+    <h2 class="text-lg font-semibold text-gray-900 mb-3">Credenciales</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- PIN -->
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-sm font-medium text-gray-900 mb-2">PIN</div>
+        <div class="flex items-center gap-2">
+          <input id="pinUserId" placeholder="User ID" class="flex-1 bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <button id="btnGenPin" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Generar</button>
+        </div>
+        <p id="pinResult" class="text-xs text-gray-500 mt-2">—</p>
+      </div>
+      <!-- NFC -->
+      <div class="bg-gray-50 border border-gray-100 rounded-xl p-3">
+        <div class="text-sm font-medium text-gray-900 mb-2">NFC</div>
+        <div class="grid grid-cols-2 gap-2">
+          <input id="nfcUserId" placeholder="User ID" class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
+          <input id="nfcCardId" placeholder="Card ID (UID)" class="bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div class="mt-2 flex items-center gap-2">
+          <button id="btnEnrollNfc" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Iniciar enrolamiento</button>
+          <button id="btnCancelNfc" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
+        </div>
+        <p id="nfcResult" class="text-xs text-gray-500 mt-2">—</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Grupos de puertas -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-4">
+    <h2 class="text-lg font-semibold text-gray-900 mb-3">Grupos de puertas</h2>
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <label class="md:col-span-5">
+        <span class="text-sm text-gray-700">Grupo</span>
+        <select id="doorGroupSelect" class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600">
+          <!-- GET /api/v1/developer/door_groups -->
+          <option value="">(Selecciona)</option>
+        </select>
+      </label>
+      <label class="md:col-span-5">
+        <span class="text-sm text-gray-700">Puertas incluidas (IDs)</span>
+        <input id="doorGroupResources" placeholder='["door-id-1","door-id-2"]' class="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
+      </label>
+      <div class="md:col-span-2 flex items-end gap-2">
+        <button id="btnNewGroup" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Nuevo</button>
+        <button id="btnSaveGroup" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Guardar</button>
+        <button id="btnDelGroup" class="px-3 py-2 rounded-lg border border-red-200 bg-white text-sm text-red-700 hover:bg-red-50">Eliminar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Script de integración (solo frontend; reemplaza host/token) -->
+  <script>
+    const HOST = 'https://TU_CONSOLA';           // p.ej. https://udm-ip o https://xyz.ui.com
+    const TOKEN = 'Bearer TU_TOKEN_API';         // Authorization: Bearer <token>
+
+    // Helpers
+    const $ = s => document.querySelector(s);
+    const headersJSON = { 'Authorization': TOKEN, 'accept':'application/json', 'content-type':'application/json' };
+
+    // ===== Puertas =====
+    async function fetchDoors() {
+      // const r = await fetch(\`\${HOST}/api/v1/developer/doors\`, { headers: headersJSON });
+      // const { data } = await r.json();
+      // Llena #doorSelect con data[]
+    }
+    async function fetchDoorState(doorId) {
+      // GET detalle puerta (relé/posición)
+      // const r = await fetch(\`\${HOST}/api/v1/developer/doors/\${doorId}\`, { headers: headersJSON });
+      // const { data } = await r.json();
+      // $('#relayStatus').textContent = data.door_lock_relay_status || '—';
+      // $('#dps').textContent = data.door_position_status || '—';
+    }
+    async function fetchLockRule(doorId) {
+      // GET /doors/:id/lock_rule
+      // const r = await fetch(\`\${HOST}/api/v1/developer/doors/\${doorId}/lock_rule\`, { headers: headersJSON });
+      // const { data } = await r.json();
+      // $('#lockRule').textContent = data?.type || '—';
+      // $('#lockEnds').textContent = data?.ended_time ? new Date(data.ended_time*1000).toLocaleString() : '—';
+    }
+    async function putUnlock(doorId) {
+      // PUT /doors/:id/unlock
+      // await fetch(\`\${HOST}/api/v1/developer/doors/\${doorId}/unlock\`, { method:'PUT', headers: headersJSON });
+    }
+    async function putLockRule(doorId, type, seconds=null) {
+      // types: keep_lock | keep_unlock | lock_early | reset | custom(+ended_time)
+      // body: { "type":"custom", "ended_time": 1708673342 } // epoch sec
+      // await fetch(\`\${HOST}/api/v1/developer/doors/\${doorId}/lock_rule\`, {
+      //   method:'PUT', headers: headersJSON,
+      //   body: JSON.stringify(type==='custom' ? { type, ended_time: seconds } : { type })
+      // });
+    }
+    async function putEmergency({ lockdown=false, evacuation=false }) {
+      // PUT /doors/settings/emergency { lockdown: true/false, evacuation: true/false }
+      // await fetch(\`\${HOST}/api/v1/developer/doors/settings/emergency\`, { method:'PUT', headers: headersJSON, body: JSON.stringify({ lockdown, evacuation }) });
+      // Luego GET para leer estado
+      // const r = await fetch(\`\${HOST}/api/v1/developer/doors/settings/emergency\`, { headers: headersJSON });
+      // const { data } = await r.json();
+      // $('#emergStatus').textContent = \`lockdown=\${data.lockdown} / evacuation=\${data.evacuation}\`;
+    }
+
+    // ===== Horarios & Festivos =====
+    async function fetchSchedules() {
+      // GET /access_policies/schedules
+      // const r = await fetch(\`\${HOST}/api/v1/developer/access_policies/schedules\`, { headers: headersJSON });
+      // const { data } = await r.json();
+      // Llena #scheduleSelect
+    }
+    async function createSchedule(payload) {
+      // POST /access_policies/schedules { name, week_schedule:{monday:[{start_time,end_time}],...}, holiday_group_id, holiday_schedule:[...] }
+      // return fetch(\`\${HOST}/api/v1/developer/access_policies/schedules\`, { method:'POST', headers: headersJSON, body: JSON.stringify(payload) });
+    }
+    async function updateSchedule(id, payload) {
+      // PUT /access_policies/schedules/:id
+    }
+    async function deleteSchedule(id) {
+      // DELETE /access_policies/schedules/:id
+    }
+    async function fetchHolidayGroups() {
+      // GET /access_policies/holiday_groups
+    }
+
+    // ===== Políticas =====
+    async function fetchPolicies() {
+      // GET /access_policies
+    }
+    async function createPolicy({ name, resources, schedule_id }) {
+      // POST /access_policies  { name, resource:[{id,type}], schedule_id }
+    }
+    async function updatePolicy(id, { name, resources, schedule_id }) {
+      // PUT /access_policies/:id
+    }
+    async function deletePolicy(id) {
+      // DELETE /access_policies/:id
+    }
+
+    // ===== Credenciales =====
+    async function generatePin(userId) {
+      // POST /api/v1/developer/credentials/pin  (ver sección Credential)
+      // const r = await fetch(\`\${HOST}/api/v1/developer/credentials/pin\`, { method:'POST', headers: headersJSON, body: JSON.stringify({ user_id:userId }) });
+      // const { data } = await r.json(); $('#pinResult').textContent = \`PIN: \${data.pin}\`;
+    }
+    async function enrollNfc(userId, cardId) {
+      // Flujo NFC (ver Credential + User assign):
+      // 1) Iniciar sesión de enrolamiento (endpoint de Credential/NFC enroll)
+      // 2) Consultar estado hasta ver la card UID
+      // 3) Asignar tarjeta al usuario: PUT /api/v1/developer/users/:user_id/nfc_cards  (sección 3.7 Assign NFC Card to User)
+      // 4) Cerrar sesión de enrolamiento
+    }
+
+    // ===== Door Groups =====
+    async function fetchDoorGroups() {
+      // GET /api/v1/developer/door_groups  (o /door_groups/topology para armar árbol)
+    }
+    async function createDoorGroup({ group_name, resources }) {
+      // POST /door_groups { group_name, resources: ["door-id", ...] }
+    }
+    async function updateDoorGroup(id, { group_name, resources }) {
+      // PUT /door_groups/:id
+    }
+    async function deleteDoorGroup(id) {
+      // DELETE /door_groups/:id
+    }
+
+    // ====== Eventos UI (demo) ======
+    $('#btnUnlock').addEventListener('click', ()=> putUnlock($('#doorSelect').value));
+    $('#btnRuleLock').addEventListener('click', ()=> putLockRule($('#doorSelect').value, 'keep_lock'));
+    $('#btnRuleUnlock').addEventListener('click', ()=> putLockRule($('#doorSelect').value, 'keep_unlock'));
+    $('#btnRuleCustom').addEventListener('click', ()=> {
+      const mins = prompt('Minutos de desbloqueo temporal:', '10'); 
+      if (!mins) return;
+      const ends = Math.floor(Date.now()/1000) + (parseInt(mins,10)*60);
+      putLockRule($('#doorSelect').value, 'custom', ends);
+    });
+    $('#btnLockdown').addEventListener('click', ()=> putEmergency({ lockdown:true, evacuation:false }));
+    $('#btnEvac').addEventListener('click', ()=> putEmergency({ lockdown:false, evacuation:true }));
+    $('#btnEmergReset').addEventListener('click', ()=> putEmergency({ lockdown:false, evacuation:false }));
+
+    $('#btnGenPin').addEventListener('click', ()=> generatePin($('#pinUserId').value));
+    $('#btnEnrollNfc').addEventListener('click', ()=> enrollNfc($('#nfcUserId').value, $('#nfcCardId').value));
+
+    // Carga inicial (deja comentado hasta conectar)
+    // fetchDoors().then(()=> {
+    //   const id = $('#doorSelect').value;
+    //   fetchDoorState(id); fetchLockRule(id);
+    // });
+    // fetchSchedules(); fetchHolidayGroups(); fetchPolicies(); fetchDoorGroups();
+  </script>
+<%- include ('Plantilla/Final') %>

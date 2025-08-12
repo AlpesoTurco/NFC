@@ -1,0 +1,258 @@
+<%- include ('Plantilla/Inicio') %>
+<!-- Encabezado + Acciones -->
+  <section class="mb-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <h1 class="text-xl md:text-2xl font-semibold text-gray-900">Dispositivos</h1>
+        <p class="text-sm text-gray-500">Inventario y estado de controladores, lectores y torniquetes.</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+          Exportar CSV
+        </button>
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+          Registrar dispositivo
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- KPIs -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Total</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- total_devices -->
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Online</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- devices_online -->
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Alertas</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- devices_with_alerts -->
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 p-4">
+      <div class="text-xs text-gray-500">Pendientes de update</div>
+      <div class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+      <!-- devices_pending_update -->
+    </div>
+  </section>
+
+  <!-- Filtros / Búsqueda -->
+  <section class="bg-white rounded-2xl border border-gray-200 p-4 mb-6">
+    <form class="grid grid-cols-1 md:grid-cols-12 gap-3">
+      <!-- BÚSQUEDA -->
+      <label class="md:col-span-4">
+        <span class="sr-only">Buscar</span>
+        <input type="text" placeholder="Buscar por nombre, IP, MAC..."
+               class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+        <!-- q= -->
+      </label>
+
+      <!-- TIPO -->
+      <label class="md:col-span-2">
+        <span class="sr-only">Tipo</span>
+        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Tipo (todos)</option>
+          <option>Controlador</option>
+          <option>Torniquete</option>
+          <option>Lector</option>
+          <option>Cerradura</option>
+          <!-- dinámico -->
+        </select>
+        <!-- type= -->
+      </label>
+
+      <!-- ESTADO -->
+      <label class="md:col-span-2">
+        <span class="sr-only">Estado</span>
+        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Estado (todos)</option>
+          <option>Online</option>
+          <option>Offline</option>
+          <option>En mantenimiento</option>
+          <!-- status= -->
+        </select>
+      </label>
+
+      <!-- UBICACIÓN -->
+      <label class="md:col-span-2">
+        <span class="sr-only">Ubicación</span>
+        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="">Ubicación (todas)</option>
+          <option>Recepción</option>
+          <option>Zona A</option>
+          <option>Zona B</option>
+          <!-- location= -->
+        </select>
+      </label>
+
+      <!-- ORDEN -->
+      <label class="md:col-span-2">
+        <span class="sr-only">Ordenar por</span>
+        <select class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-600 focus:border-blue-600">
+          <option value="name">Ordenar por: Nombre</option>
+          <option value="status">Estado</option>
+          <option value="lastSeen">Último ping</option>
+          <option value="signal">Señal</option>
+          <!-- sort= -->
+        </select>
+      </label>
+
+      <!-- BOTÓN FILTRAR -->
+      <div class="md:col-span-0 flex">
+        <button class="w-full rounded-lg bg-blue-600 text-white text-sm font-medium px-3 py-2 hover:bg-blue-700">
+          Filtrar
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Grid de dispositivos -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+    <!-- Tarjeta de dispositivo (repetir por cada item) -->
+    <article class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+      <div class="flex items-start justify-between">
+        <div>
+          <!-- NOMBRE DEL DISPOSITIVO -->
+          <h3 class="text-gray-900 font-semibold leading-tight">Nombre del dispositivo</h3>
+          <!-- TIPO / MODELO -->
+          <p class="text-sm text-gray-500 mt-0.5">Tipo / Modelo</p>
+        </div>
+        <!-- ESTADO -->
+        <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+          Online
+        </span>
+        <!-- Alternativas: Offline (bg-red-50 text-red-700 ...), Mantenimiento (bg-yellow-50 text-yellow-700 ...) -->
+      </div>
+
+      <!-- METADATOS PRINCIPALES -->
+      <dl class="grid grid-cols-2 gap-x-6 gap-y-2 mt-4 text-sm">
+        <div>
+          <dt class="text-gray-500">IP</dt>
+          <dd class="text-gray-900 font-medium">192.168.1.20</dd> <!-- device.ip -->
+        </div>
+        <div>
+          <dt class="text-gray-500">MAC</dt>
+          <dd class="text-gray-900 font-medium">AA:BB:CC:DD:EE:FF</dd> <!-- device.mac -->
+        </div>
+        <div>
+          <dt class="text-gray-500">Firmware</dt>
+          <dd class="text-gray-900">v1.2.3</dd> <!-- device.firmware -->
+        </div>
+        <div>
+          <dt class="text-gray-500">Último ping</dt>
+          <dd class="text-gray-900">2025-08-11 09:05</dd> <!-- device.lastSeen -->
+        </div>
+        <div>
+          <dt class="text-gray-500">Uptime</dt>
+          <dd class="text-gray-900">3d 12h</dd> <!-- device.uptime_human -->
+        </div>
+        <div>
+          <dt class="text-gray-500">Ubicación</dt>
+          <dd class="text-gray-900">Recepción</dd> <!-- device.location -->
+        </div>
+      </dl>
+
+      <!-- SALUD / MÉTRICAS RÁPIDAS -->
+      <div class="mt-4 grid grid-cols-3 gap-2 text-xs">
+        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2 text-center">
+          <div class="text-gray-500">CPU</div>
+          <div class="mt-0.5 font-semibold text-gray-900">17%</div> <!-- device.health.cpu -->
+        </div>
+        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2 text-center">
+          <div class="text-gray-500">RAM</div>
+          <div class="mt-0.5 font-semibold text-gray-900">42%</div> <!-- device.health.ram -->
+        </div>
+        <div class="bg-gray-50 border border-gray-100 rounded-lg p-2 text-center">
+          <div class="text-gray-500">Señal</div>
+          <div class="mt-0.5 font-semibold text-gray-900">-62 dBm</div> <!-- device.health.signal / N/A si cable -->
+        </div>
+      </div>
+
+      <!-- TAGS / Capacidades -->
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">NFC</span>
+        <span class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">PoE</span>
+        <span class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-700 border border-gray-200">Rele 1</span>
+        <!-- Genera desde device.capabilities[] -->
+      </div>
+
+      <!-- ACCIONES -->
+      <div class="mt-5 flex items-center gap-2">
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+          Ver detalles
+        </button>
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">
+          Reiniciar
+        </button>
+        <!-- Acción contextual (ej. abrir torniquete si es gate) -->
+        <button class="ml-auto px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">
+          Acción principal
+        </button>
+      </div>
+    </article>
+    <!-- /Tarjeta de dispositivo -->
+  </section>
+
+  <!-- Paginación -->
+  <nav class="mt-6 flex items-center justify-between gap-3">
+    <p class="text-sm text-gray-500">
+      Mostrando 0–0 de 0 dispositivos
+      <!-- texto dinámico: from–to de total -->
+    </p>
+    <div class="flex items-center gap-2">
+      <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Anterior</button>
+      <div class="hidden sm:flex items-center gap-1">
+        <!-- páginas dinámicas -->
+        <button class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm">1</button>
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">2</button>
+        <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">3</button>
+      </div>
+      <button class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Siguiente</button>
+    </div>
+  </nav>
+
+  <!-- (Opcional) Tabla compacta alternativa -->
+  <section class="hidden mt-6 bg-white rounded-2xl border border-gray-200 p-4">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-gray-600">
+          <tr>
+            <th class="px-4 py-2 text-left">Nombre</th>
+            <th class="px-4 py-2 text-left">Tipo</th>
+            <th class="px-4 py-2 text-left">IP</th>
+            <th class="px-4 py-2 text-left">MAC</th>
+            <th class="px-4 py-2 text-left">Firmware</th>
+            <th class="px-4 py-2 text-left">Último ping</th>
+            <th class="px-4 py-2 text-left">Estado</th>
+            <th class="px-4 py-2 text-left"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+          <tr>
+            <td class="px-4 py-2">Nombre del dispositivo</td>
+            <td class="px-4 py-2">Tipo / Modelo</td>
+            <td class="px-4 py-2">192.168.1.20</td>
+            <td class="px-4 py-2">AA:BB:CC:DD:EE:FF</td>
+            <td class="px-4 py-2">v1.2.3</td>
+            <td class="px-4 py-2">2025-08-11 09:05</td>
+            <td class="px-4 py-2">
+              <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">Online</span>
+            </td>
+            <td class="px-4 py-2">
+              <div class="flex gap-2">
+                <button class="px-2 py-1 rounded border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Ver</button>
+                <button class="px-2 py-1 rounded border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50">Reiniciar</button>
+              </div>
+            </td>
+          </tr>
+          <!-- Repite filas -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+<%- include ('Plantilla/Final') %>

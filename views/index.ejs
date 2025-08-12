@@ -1,129 +1,71 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduShare</title>
-    <link rel="stylesheet" href="resources/css/style.css">
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<%- include ('Plantilla/Inicio') %>
 
-    
-</head>
-<body class="bg-cover-center bg-white h-screen flex flex-col">
+        <!-- Sección control y KPIs -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Control de Acceso</h2>
+            <p class="text-sm text-gray-500 mb-4">Operación inmediata del torniquete.</p>
+            <button id="openGateBtn" class="w-full bg-blue-600 text-white font-medium px-4 py-3 rounded-lg hover:bg-blue-700">
+              Abrir torniquete
+            </button>
+            <p id="gateHint" class="mt-3 text-xs text-gray-500">Último comando: 2025-08-11 09:00</p>
+          </div>
 
-    <%if(login) {%>
-        <!-- Barra de navegación -->
-        <%- include ('plantilla/navbar') %>
-        <!-- Contenido del dashboard -->
-        <div class="flex flex-grow">
-        <!-- Barra lateral -->
-        <%- include ('plantilla/Barra-lateral') %>
-        <!-- Contenido principal -->
-        <main class="w-3/4 p-4 contenido absolute top-16 left-1/4">
-        
-            
-                    <div class="container mx-auto">
-                        <section id="SearchResults"></section>
-                        <% results.forEach((files) => { %> 
-                            <section class="bg-gray-100 py-8">
-                                <div class="container mx-auto overflow-y-auto">
-                                    <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg relative">
-                                        <a href="/perfil/<%= files.EstudianteID%>">
-                                            <div class="text-gray-400 absolute top-0 left-0 mt-2 ml-2">
-                                                <p>
-                                                    <% if(files.Usuario === name) { %>
-                                                    <span class="font-bold">Tú</span>
-                                                    <% } else { %>
-                                                    <span class="font-bold"><%= files.Usuario %></span>   
-                                                    <% } %>
-                                                    <span class="italic"><%= new Date(files.Fecha).toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></span>
-                                                </p>
-                                                
-                                            </div>
-                                        </a>
-                                        <br>
-                                        <div class="p-6">
-                                            <!-- Agregar imagen de perfil o ícono representativo aquí -->
-                                            <h4 class="text-xl font-semibold text-gray-800"><%= files.Titulo %></h4>
-                                            <p class="text-gray-700 mt-2"><%= files.Descripcion %></p>
-                                            <!-- Rectángulo como botón con icono y texto -->
-                                            <br>
-                                            <div class="relative w-full">
-                                                <div id="custom-file-button" class="bg-white border border-gray-300 rounded-md py-2 px-4 w-full flex items-center ">
-                                                    <% if(files.TipoArchivo === '.pdf') { %>
-                                                        <i class='bx bxs-file-pdf text-2xl' style='color:#ef1111'></i>
-                                                    <% } else if(files.TipoArchivo === '.docx') { %>
-                                                        <i class='bx bxs-file-doc text-2xl' style='color:#052890'></i>
-                                                    <% } else { %>
-                                                        <!-- Icono predeterminado si no coincide con los tipos de archivo especificados -->
-                                                        <i class='bx bx-file-find text-2xl' style='color:#ffed25'></i>
-                                                    <% } %>
-                                                    <span id="file-name" class="text-gray-600"><%= files.ReNombre %></span>
-                                                </div>
-                                            </div>
-                                            <br>
-                                            
-                                            <div class="mt-4 flex justify-between text-xl items-center">
-                                                <div class="flex items-center space-x-4">
-                                                    <!-- Agregar botones de acción -->
-                                                    <button class="likeButton focus:outline-none">
-                                                        <i class="likeIcon bx bx-like text-gray-600 hover:text-blue-500"></i>
-                                                    </button>
-                                                    <a href="commentary/<%= files.PublicacionID%>" class="focus:outline-none">
-                                                        <i class="bx bx-comment text-gray-600 hover:text-blue-500"></i>
-                                                    </a>
-                                                    <button class="focus:outline-none">
-                                                        <a href="<%= files.RutaArchivo %><%= files.TipoArchivo%>" target="_blank">
-                                                            <i class='bx bx-cloud-download' ></i>
-                                                        </a>
-                                                    </button>
-                                                </div>
-                                                
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </section>
-                            
-                            
-                        <% }) %>
-                    </div>
-                    
-               
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Último acceso</h2>
+            <div class="flex items-center">
+              <img src="/resources/img/Usuario 2.svg" alt="" class="w-14 h-14 rounded-xl border border-gray-200">
+              <div class="ml-4">
+                <div class="font-medium text-gray-900">Nombre empleado</div>
+                <div class="text-sm text-gray-500">Puesto</div>
+                <div class="text-xs text-gray-400 mt-1">
+                  Hora: <span class="text-gray-700">00:00</span> • Dispositivo: <span class="text-gray-700">Torniquete 1</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
-        </main>
-    </div>
-     <%} else { %>
-            <%- include ('plantilla/logout') %>
-    <% } %>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+              <div class="text-xs text-gray-500">Entradas hoy</div>
+              <div class="text-2xl font-semibold text-gray-900">0</div>
+              <div class="text-xs text-green-600">+0 vs ayer</div>
+            </div>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+              <div class="text-xs text-gray-500">Incidencias</div>
+              <div class="text-2xl font-semibold text-gray-900">0</div>
+              <div class="text-xs text-gray-500">Sin incidencias</div>
+            </div>
+          </div>
+        </section>
 
-    <script>
-        // Obtener referencias a los botones y los íconos de "like"
-        const likeButtons = document.querySelectorAll('.likeButton');
+        <!-- Actividad reciente -->
+        <section id="actividad" class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
+          <h3 class="text-lg font-semibold text-gray-900 mb-4">Actividad reciente</h3>
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-gray-600">
+              <tr>
+                <th class="px-5 py-3 text-left">Empleado</th>
+                <th class="px-5 py-3 text-left">Evento</th>
+                <th class="px-5 py-3 text-left">Fecha/Hora</th>
+                <th class="px-5 py-3 text-left">Dispositivo</th>
+                <th class="px-5 py-3 text-left">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+              <tr>
+                <td class="px-5 py-3">Nombre empleado</td>
+                <td class="px-5 py-3">Entrada</td>
+                <td class="px-5 py-3">2025-08-11 08:30</td>
+                <td class="px-5 py-3">Torniquete 1</td>
+                <td class="px-5 py-3">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                    Correcto
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
 
-        // Agregar evento de clic a cada botón de "like"
-        likeButtons.forEach(likeButton => {
-            likeButton.addEventListener('click', function() {
-                // Obtener el ícono de "like" dentro del botón actual
-                const likeIcon = this.querySelector('.likeIcon');
-
-                // Cambiar el color del ícono dependiendo del estado
-                if (likeIcon.classList.contains('text-gray-600')) {
-                    likeIcon.classList.remove('text-gray-600');
-                    likeIcon.classList.add('text-blue-500');
-                } else {
-                    likeIcon.classList.remove('text-blue-500');
-                    likeIcon.classList.add('text-gray-600');
-                }
-
-                // Aquí puedes agregar lógica adicional, como enviar una solicitud al servidor para registrar el like.
-            });
-        });
-
-    </script>
-    
-</body>
-</html>
+      <%- include ('Plantilla/Final') %>
