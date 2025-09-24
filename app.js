@@ -21,6 +21,9 @@ app.use('/resources', express.static(__dirname + 'public'));
 app.set("view engine", "ejs");
 app.set('views', path.join(__dirname, 'views'));
 
+// Servir archivos subidos
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 const bcryptjs = require ('bcryptjs');
 const { Session } = require('express-session');
 

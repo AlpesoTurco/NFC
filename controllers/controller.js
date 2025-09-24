@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 controller.use('/', require('./login_controller'));
+controller.use('/', require('./pendientes_controller'));
 
 controller.post('/acceso/abrir', (req, res) => {
   let { id_usuario, motivofk, observaciones } = req.body;

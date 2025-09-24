@@ -158,7 +158,10 @@
       <button class="p-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" data-close="dlgPermiso">✕</button>
     </header>
 
-    <form id="formPermiso" class="p-5 space-y-4" novalidate>
+    <form id="formPermiso" class="p-5 space-y-4" novalidate enctype="multipart/form-data">
+      <!-- Id del usaurio -->
+       <input type="hidden" name="id_usuario" value="<%= user.id_usuario %>">
+
       <!-- Tipo de permiso -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <label class="block">
@@ -235,10 +238,11 @@
           placeholder="Describe el motivo de tu permiso…"></textarea>
       </div>
 
+
       <!-- Adjuntos -->
       <div id="permDrop"
            class="border-2 border-dashed border-gray-300 rounded-xl p-3 text-sm text-gray-600 hover:border-blue-400 transition">
-        <p><strong>Adjuntos (opcional):</strong> arrastra archivos o <label class="text-blue-600 underline cursor-pointer">explora<input id="permFiles" type="file" class="sr-only" multiple></label></p>
+        <p><strong>Adjuntos (opcional):</strong> arrastra archivos o <label class="text-blue-600 underline cursor-pointer">explora<input id="permFiles" name="files" type="file" class="sr-only" multiple></label></p>
         <div id="permPreview" class="mt-2 flex flex-wrap gap-2"></div>
       </div>
 
@@ -323,249 +327,479 @@
   </div>
 </dialog>
 
-
 <script>
-// ====== Estado inicial demo ======
-let PERMISOS_RESTANTES = 5; // <-- actualízalo con tu backend
-const bandeja = []; // { id, kind:'permiso'|'incidencia', empleado, motivo/desc, rango/fecha, adjuntos[], estatus:'En revisión'|'Aprobado'|'Rechazado' }
+  // ====== Estado inicial demo ======
+  let PERMISOS_RESTANTES = 5; // <-- actualízalo con tu backend
+  const bandeja = []; // { id, kind:'permiso'|'incidencia', empleado, motivo/desc, rango/fecha, adjuntos[], estatus:'En revisión'|'Aprobado'|'Rechazado' }
 
-// Refrescar KPI de permisos restantes (si existe en tu header)
-function syncPermisosRestantes() {
-  const el = document.querySelector('#kpiTotal');
-  if (el) el.textContent = PERMISOS_RESTANTES;
-}
-syncPermisosRestantes();
-
-// ====== Helpers UI ======
-const toast = (msg) => {
-  const t = document.createElement('div');
-  t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-xl bg-gray-900 text-white text-sm shadow-lg';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(()=> t.remove(), 2200);
-};
-
-const badge = (status) => {
-  const map = {
-    'En revisión': 'bg-amber-50 text-amber-700 border border-amber-200',
-    'Aprobado': 'bg-green-50 text-green-700 border border-green-200',
-    'Rechazado': 'bg-red-50 text-red-700 border-red-200 border'
-  };
-  return `<span class="px-2.5 py-1 rounded-full text-xs font-medium ${map[status]||'bg-gray-100 text-gray-700 border'}">${status}</span>`;
-};
-
-// ====== FAB ======
-const fabToggle = document.getElementById('fabToggle');
-const fabMenu = document.getElementById('fabMenu');
-fabToggle?.addEventListener('click', () => {
-  fabMenu.classList.toggle('hidden');
-  fabToggle.textContent = fabMenu.classList.contains('hidden') ? '＋' : '✕';
-});
-document.getElementById('btnPermisoOpen')?.addEventListener('click', () => { document.getElementById('dlgPermiso').showModal(); fabMenu.classList.add('hidden'); fabToggle.textContent = '＋'; });
-document.getElementById('btnIncidenciaOpen')?.addEventListener('click', () => { document.getElementById('dlgIncidencia').showModal(); fabMenu.classList.add('hidden'); fabToggle.textContent = '＋'; });
-
-// ====== Cerrar modales por data-close ======
-document.querySelectorAll('[data-close]').forEach(btn=>{
-  btn.addEventListener('click', ()=> document.getElementById(btn.dataset.close).close());
-});
-
-// ====== Permiso: cambiar modalidad (días vs horas) ======
-const permModalidad = document.getElementById('permModalidad');
-const permFechas = document.getElementById('permFechas');
-const permHoras = document.getElementById('permHoras');
-permModalidad?.addEventListener('change', ()=>{
-  const byHours = permModalidad.value === 'por-horas';
-  permHoras.classList.toggle('hidden', !byHours);
-  // en horas, solo una fecha (inicio) basta visualmente; puedes forzar fin = inicio al enviar
-});
-
-// ====== Contadores de texto ======
-const bindCounter = (formSel, taSel, counterSel) => {
-  const form = document.querySelector(formSel);
-  if (!form) return;
-  const ta = form.querySelector(taSel);
-  const counter = document.querySelector(counterSel);
-  ta?.addEventListener('input', ()=>{
-    counter.textContent = `${ta.value.length}/${ta.maxLength||300}`;
-  });
-};
-bindCounter('#formPermiso', 'textarea[name="motivo"]', '#permCount');
-bindCounter('#formIncidencia', 'textarea[name="descripcion"]', '#incCount');
-
-// ====== DnD/Adjuntos ======
-function setupDrop(dropId, inputId, previewId) {
-  const drop = document.getElementById(dropId);
-  const input = document.getElementById(inputId);
-  const preview = document.getElementById(previewId);
-  if (!drop || !input || !preview) return;
-
-  const renderFiles = (files) => {
-    preview.innerHTML = '';
-    [...files].forEach(f=>{
-      const tag = document.createElement('div');
-      tag.className = 'px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-xs';
-      tag.textContent = `${f.name} • ${Math.ceil((f.size||0)/1024)} KB`;
-      preview.appendChild(tag);
-    });
-  };
-
-  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('border-blue-400'); });
-  drop.addEventListener('dragleave', () => drop.classList.remove('border-blue-400'));
-  drop.addEventListener('drop', e => {
-    e.preventDefault(); drop.classList.remove('border-blue-400');
-    input.files = e.dataTransfer.files;
-    renderFiles(input.files);
-  });
-  input.addEventListener('change', ()=> renderFiles(input.files));
-}
-setupDrop('permDrop','permFiles','permPreview');
-setupDrop('incDrop','incFiles','incPreview');
-
-// ====== Render bandeja ======
-const inboxBody = document.getElementById('inboxBody');
-function renderBandeja(filter='all') {
-  if (!inboxBody) return;
-  inboxBody.innerHTML = '';
-  const rows = bandeja.filter(i => filter==='all' ? true : i.kind===filter);
-  document.getElementById('badgePermisos').textContent = bandeja.filter(i=>i.kind==='permiso').length;
-  document.getElementById('badgeIncidencias').textContent = bandeja.filter(i=>i.kind==='incidencia').length;
-
-  rows.slice().reverse().forEach(item => {
-    const tr = document.createElement('tr');
-    const adj = (item.adjuntos||[]).length ? `${item.adjuntos.length} archivo(s)` : '—';
-    tr.innerHTML = `
-      <td class="px-4 py-2 capitalize">${item.kind}</td>
-      <td class="px-4 py-2">${item.empleado||'—'}</td>
-      <td class="px-4 py-2">${item.motivo||item.descripcion||'—'}</td>
-      <td class="px-4 py-2">${item.rango||item.fecha||'—'}</td>
-      <td class="px-4 py-2">${adj}</td>
-      <td class="px-4 py-2">${badge(item.estatus||'En revisión')}</td>
-      <td class="px-4 py-2 text-right">
-        <button class="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50" data-id="${item.id}" data-act="ver">Ver</button>
-      </td>`;
-    inboxBody.appendChild(tr);
-  });
-
-  // acción Ver => abre detalle genérico reutilizando tu modal actual de detalle
-  inboxBody.querySelectorAll('[data-act="ver"]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const it = bandeja.find(x=>x.id===btn.dataset.id);
-      if (!it) return;
-      // Mapeo básico al modal existente de detalle:
-      document.getElementById('dEmpleado').textContent = it.empleado || '—';
-      document.getElementById('dPuesto').textContent = it.kind==='permiso' ? 'Permiso' : 'Incidencia';
-      document.getElementById('dEvento').textContent = it.kind;
-      document.getElementById('dEstado').textContent = it.estatus || 'En revisión';
-      document.getElementById('dMotivo').textContent = it.motivo || it.descripcion || '—';
-      document.getElementById('dFecha').textContent  = it.rango || it.fecha || '—';
-      document.getElementById('dDevice').textContent = '—';
-      document.getElementById('dMetodo').textContent = '—';
-      document.getElementById('dUbicacion').textContent = it.ubicacion || '—';
-      document.getElementById('dAudit').textContent = it.id;
-      document.getElementById('dlg').showModal();
-    });
-  });
-}
-renderBandeja();
-
-// Filtros de bandeja
-document.querySelectorAll('.tagFilter').forEach(b=>{
-  b.addEventListener('click', ()=>{
-    document.querySelectorAll('.tagFilter').forEach(x=>x.classList.remove('bg-gray-50'));
-    b.classList.add('bg-gray-50');
-    renderBandeja(b.dataset.filter);
-  });
-});
-
-// ====== Envío: Permiso ======
-document.getElementById('formPermiso')?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const f = e.currentTarget;
-  const fd = new FormData(f);
-  const tipo = fd.get('tipo');
-  const modalidad = fd.get('modalidad');
-  const inicio = fd.get('inicio');
-  const fin = fd.get('fin');
-  const hInicio = fd.get('hInicio');
-  const hFin = fd.get('hFin');
-  const goce = fd.get('goce');
-  const motivo = (fd.get('motivo')||'').trim();
-
-  // Validación mínima
-  if (!tipo || !modalidad || !inicio || (!fin && modalidad==='dia-completo') || !motivo) {
-    toast('Revisa los campos requeridos'); return;
+  // Refrescar KPI de permisos restantes (si existe en tu header)
+  function syncPermisosRestantes() {
+    const el = document.querySelector('#kpiTotal');
+    if (el) el.textContent = PERMISOS_RESTANTES;
   }
-  if (modalidad==='por-horas' && (!hInicio || !hFin)) {
-    toast('Indica las horas del permiso'); return;
-  }
-
-  const files = document.getElementById('permFiles').files;
-  const adjuntos = [...files].map(f => ({ name: f.name, size: f.size }));
-
-  const id = `PERM-${Date.now()}`;
-  const rango = modalidad==='dia-completo'
-      ? `${inicio} — ${fin||inicio}`
-      : `${inicio} ${hInicio}–${hFin}`;
-
-  // Simulación frontend: actualizar bandeja y KPIs
-  bandeja.push({
-    id, kind:'permiso', empleado:'(Tú)', motivo, rango, adjuntos,
-    estatus:'En revisión', goce, tipo, modalidad
-  });
-  renderBandeja();
-  // opcional: reduce permisos restantes si aplica tu política:
-  PERMISOS_RESTANTES = Math.max(0, PERMISOS_RESTANTES - 1);
   syncPermisosRestantes();
 
-  // Backend real (ejemplo):
-  /*
-  const res = await fetch('/permisos', { method:'POST', body: fd });
-  const json = await res.json();
-  */
+  // ====== Helpers UI ======
+  const toast = (msg) => {
+    const t = document.createElement('div');
+    t.className =
+      'fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-xl bg-gray-900 text-white text-sm shadow-lg';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2200);
+  };
 
-  document.getElementById('dlgPermiso').close();
-  f.reset();
-  document.getElementById('permPreview').innerHTML = '';
-  toast('Solicitud de permiso enviada');
-});
+  const badge = (status) => {
+    const map = {
+      'En revisión': 'bg-amber-50 text-amber-700 border border-amber-200',
+      'Aprobado': 'bg-green-50 text-green-700 border border-green-200',
+      'Rechazado': 'bg-red-50 text-red-700 border-red-200 border',
+    };
+    return `<span class="px-2.5 py-1 rounded-full text-xs font-medium ${
+      map[status] || 'bg-gray-100 text-gray-700 border'
+    }">${status}</span>`;
+  };
 
-// ====== Envío: Incidencia ======
-document.getElementById('formIncidencia')?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const f = e.currentTarget;
-  const fd = new FormData(f);
-  const categoria = fd.get('categoria');
-  const fecha = fd.get('fecha');
-  const descripcion = (fd.get('descripcion')||'').trim();
-  const impacto = fd.get('impacto');
-  const ubicacion = fd.get('ubicacion');
+  // ====== FAB ======
+  const fabToggle = document.getElementById('fabToggle');
+  const fabMenu = document.getElementById('fabMenu');
 
-  if (!categoria || !fecha || !descripcion || !impacto) {
-    toast('Revisa los campos requeridos'); return;
-  }
-  const files = document.getElementById('incFiles').files;
-  const adjuntos = [...files].map(f => ({ name: f.name, size: f.size }));
-
-  const id = `INCI-${Date.now()}`;
-
-  bandeja.push({
-    id, kind:'incidencia', empleado:'(Tú)', descripcion, fecha, adjuntos, ubicacion, impacto,
-    estatus:'En revisión', categoria
+  fabToggle?.addEventListener('click', () => {
+    fabMenu.classList.toggle('hidden');
+    fabToggle.textContent = fabMenu.classList.contains('hidden') ? '＋' : '✕';
   });
+
+  document.getElementById('btnPermisoOpen')?.addEventListener('click', () => {
+    document.getElementById('dlgPermiso').showModal();
+    fabMenu.classList.add('hidden');
+    fabToggle.textContent = '＋';
+  });
+
+  document.getElementById('btnIncidenciaOpen')?.addEventListener('click', () => {
+    document.getElementById('dlgIncidencia').showModal();
+    fabMenu.classList.add('hidden');
+    fabToggle.textContent = '＋';
+  });
+
+  // ====== Cerrar modales por data-close ======
+  document.querySelectorAll('[data-close]').forEach((btn) => {
+    btn.addEventListener('click', () =>
+      document.getElementById(btn.dataset.close).close()
+    );
+  });
+
+  // ====== Permiso: cambiar modalidad (días vs horas) ======
+  const permModalidad = document.getElementById('permModalidad');
+  const permFechas = document.getElementById('permFechas');
+  const permHoras = document.getElementById('permHoras');
+
+  permModalidad?.addEventListener('change', () => {
+    const byHours = permModalidad.value === 'por-horas';
+    permHoras.classList.toggle('hidden', !byHours);
+    // en horas, solo una fecha (inicio) basta visualmente; puedes forzar fin = inicio al enviar
+  });
+
+  // ====== Contadores de texto ======
+  const bindCounter = (formSel, taSel, counterSel) => {
+    const form = document.querySelector(formSel);
+    if (!form) return;
+    const ta = form.querySelector(taSel);
+    const counter = document.querySelector(counterSel);
+    ta?.addEventListener('input', () => {
+      counter.textContent = `${ta.value.length}/${ta.maxLength || 300}`;
+    });
+  };
+
+  bindCounter('#formPermiso', 'textarea[name="motivo"]', '#permCount');
+  bindCounter('#formIncidencia', 'textarea[name="descripcion"]', '#incCount');
+
+  // ====== DnD/Adjuntos ======
+  function setupDrop(dropId, inputId, previewId) {
+    const drop = document.getElementById(dropId);
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+    if (!drop || !input || !preview) return;
+
+    const renderFiles = (files) => {
+      preview.innerHTML = '';
+      [...files].forEach((f) => {
+        const tag = document.createElement('div');
+        tag.className =
+          'px-2 py-1 rounded-lg border border-gray-200 bg-gray-50 text-xs';
+        tag.textContent = `${f.name} • ${Math.ceil((f.size || 0) / 1024)} KB`;
+        preview.appendChild(tag);
+      });
+    };
+
+    drop.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      drop.classList.add('border-blue-400');
+    });
+
+    drop.addEventListener('dragleave', () =>
+      drop.classList.remove('border-blue-400')
+    );
+
+    drop.addEventListener('drop', (e) => {
+      e.preventDefault();
+      drop.classList.remove('border-blue-400');
+
+      const dt = new DataTransfer();
+      // agrega archivos arrastrados
+      for (const file of e.dataTransfer.files) dt.items.add(file);
+      // si ya había seleccionados por el input, los conservamos
+      for (const file of input.files) dt.items.add(file);
+
+      input.files = dt.files; // ✅ esto sí funciona
+      renderFiles(input.files);
+    });
+
+    input.addEventListener('change', () => renderFiles(input.files));
+  }
+
+  setupDrop('permDrop', 'permFiles', 'permPreview');
+  setupDrop('incDrop', 'incFiles', 'incPreview');
+
+  // ====== Render bandeja ======
+  const inboxBody = document.getElementById('inboxBody');
+
+  function renderBandeja(filter = 'all') {
+    if (!inboxBody) return;
+    inboxBody.innerHTML = '';
+
+    const rows = bandeja.filter((i) => (filter === 'all' ? true : i.kind === filter));
+    document.getElementById('badgePermisos').textContent = bandeja.filter(
+      (i) => i.kind === 'permiso'
+    ).length;
+    document.getElementById('badgeIncidencias').textContent = bandeja.filter(
+      (i) => i.kind === 'incidencia'
+    ).length;
+
+    rows
+      .slice()
+      .reverse()
+      .forEach((item) => {
+        const tr = document.createElement('tr');
+        const adj = (item.adjuntos || []).length
+          ? `${item.adjuntos.length} archivo(s)`
+          : '—';
+        tr.innerHTML = `
+          <td class="px-4 py-2 capitalize">${item.kind}</td>
+          <td class="px-4 py-2">${item.empleado || '—'}</td>
+          <td class="px-4 py-2">${item.motivo || item.descripcion || '—'}</td>
+          <td class="px-4 py-2">${item.rango || item.fecha || '—'}</td>
+          <td class="px-4 py-2">${adj}</td>
+          <td class="px-4 py-2">${badge(item.estatus || 'En revisión')}</td>
+          <td class="px-4 py-2 text-right">
+            <button
+              class="px-2.5 py-1.5 rounded-lg border border-gray-200 bg-white text-xs text-gray-700 hover:bg-gray-50"
+              data-id="${item.id}"
+              data-act="ver"
+            >
+              Ver
+            </button>
+          </td>
+        `;
+        inboxBody.appendChild(tr);
+      });
+
+    // acción Ver => abre detalle genérico reutilizando tu modal actual de detalle
+    inboxBody.querySelectorAll('[data-act="ver"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const it = bandeja.find((x) => x.id === btn.dataset.id);
+        if (!it) return;
+
+        document.getElementById('dEmpleado').textContent = it.empleado || '—';
+        document.getElementById('dPuesto').textContent =
+          it.kind === 'permiso' ? 'Permiso' : 'Incidencia';
+        document.getElementById('dEvento').textContent = it.kind;
+        document.getElementById('dEstado').textContent = it.estatus || 'En revisión';
+        document.getElementById('dMotivo').textContent =
+          it.motivo || it.descripcion || '—';
+        document.getElementById('dFecha').textContent = it.rango || it.fecha || '—';
+        document.getElementById('dDevice').textContent = '—';
+        document.getElementById('dMetodo').textContent = '—';
+        document.getElementById('dUbicacion').textContent = it.ubicacion || '—';
+        document.getElementById('dAudit').textContent = it.id;
+
+        document.getElementById('dlg').showModal();
+      });
+    });
+  }
+
   renderBandeja();
 
-  // Backend real (ejemplo):
-  /*
-  const res = await fetch('/incidencias', { method:'POST', body: fd });
-  const json = await res.json();
-  */
+  // Filtros de bandeja
+  document.querySelectorAll('.tagFilter').forEach((b) => {
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.tagFilter').forEach((x) =>
+        x.classList.remove('bg-gray-50')
+      );
+      b.classList.add('bg-gray-50');
+      renderBandeja(b.dataset.filter);
+    });
+  });
 
-  document.getElementById('dlgIncidencia').close();
-  f.reset();
-  document.getElementById('incPreview').innerHTML = '';
-  toast('Incidencia reportada');
-});
+  // ====== Envío: Permiso ======
+  (() => {
+    const form = document.getElementById('formPermiso');
+    if (!form) return;
+
+    const MAX_FILES = 10;
+    const MAX_FILE_MB = 10;
+
+    const inputFiles = document.getElementById('permFiles');
+    const preview = document.getElementById('permPreview');
+    const dialog = document.getElementById('dlgPermiso');
+    const btnSubmit = form.querySelector('button[type="submit"]');
+
+    // asegúrate del enctype por si JS falla
+    if (!form.getAttribute('enctype')) {
+      form.setAttribute('enctype', 'multipart/form-data');
+    }
+
+    const setLoading = (v) => {
+      if (!btnSubmit) return;
+      btnSubmit.disabled = v;
+      btnSubmit.dataset.loading = v ? '1' : '0';
+      btnSubmit.textContent = v ? 'Enviando…' : 'Enviar solicitud';
+    };
+
+    const validarArchivos = (files) => {
+      if (files.length > MAX_FILES) {
+        toast(`Máximo ${MAX_FILES} archivos.`);
+        return false;
+      }
+      for (const f of files) {
+        if (f.size > MAX_FILE_MB * 1024 * 1024) {
+          toast(`"${f.name}" supera ${MAX_FILE_MB} MB.`);
+          return false;
+        }
+      }
+      return true;
+    };
+
+    // vista previa
+    inputFiles?.addEventListener('change', () => {
+      if (!inputFiles?.files || !preview) return;
+
+      if (!validarArchivos(inputFiles.files)) {
+        inputFiles.value = '';
+        preview.innerHTML = '';
+        return;
+      }
+
+      preview.innerHTML = '';
+      [...inputFiles.files].forEach((f) => {
+        const el = document.createElement('div');
+        el.className = 'px-2 py-1 rounded-lg border text-xs';
+        el.textContent = `${f.name} (${Math.round(f.size / 1024)} KB)`;
+        preview.appendChild(el);
+      });
+    });
+
+    // ENVÍO
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const fd = new FormData(form);
+
+      // tomar valores
+      const tipo = fd.get('tipo');
+      const modalidad = fd.get('modalidad');
+      const inicio = fd.get('inicio');
+      let fin = fd.get('fin');
+      let hInicio = fd.get('hInicio');
+      let hFin = fd.get('hFin');
+      const goce = fd.get('goce');
+      const motivo = (fd.get('motivo') || '').trim();
+
+      // validación mínima
+      if (!tipo || !modalidad || !inicio || !motivo) {
+        toast('Revisa los campos requeridos');
+        return;
+      }
+
+      // normalizaciones iguales al backend
+      if (modalidad === 'dia-completo') {
+        if (!fin) fin = inicio;
+        fd.set('fin', fin); // normaliza
+        fd.set('hInicio', ''); // limpia horas
+        fd.set('hFin', '');
+        hInicio = '';
+        hFin = '';
+      } else if (modalidad === 'por-horas') {
+        if (!hInicio || !hFin) {
+          toast('Indica hora inicio y fin para modalidad por horas');
+          return;
+        }
+      }
+
+      // validar archivos antes de enviar
+      if (inputFiles?.files && !validarArchivos(inputFiles.files)) return;
+
+      // adjuntar explícitamente los archivos al FormData
+      if (inputFiles && inputFiles.files && inputFiles.files.length) {
+        fd.delete('files'); // evita duplicados
+        for (const file of inputFiles.files) {
+          fd.append('files', file, file.name);
+        }
+      }
+
+      // asegurar motivo recortado
+      fd.set('motivo', motivo);
+
+      setLoading(true);
+
+      try {
+        const res = await fetch('/permisos', {
+          method: 'POST',
+          body: fd, // NO pongas Content-Type manual
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+        const json = contentType.includes('application/json')
+          ? await res.json()
+          : { ok: res.ok, msg: res.statusText };
+
+        if (!res.ok || !json?.ok) {
+          toast((json && (json.msg || json.error)) || 'Error al enviar la solicitud');
+          setLoading(false);
+          return;
+        }
+
+        // éxito
+        dialog?.close();
+        form.reset();
+        if (preview) preview.innerHTML = '';
+
+        // opcional: actualizar bandeja/KPIs
+        if (typeof renderBandeja === 'function' && typeof bandeja !== 'undefined') {
+          const rango =
+            modalidad === 'dia-completo'
+              ? `${inicio} — ${fin || inicio}`
+              : `${inicio} ${hInicio}–${hFin}`;
+
+          const filesArr = inputFiles?.files ? [...inputFiles.files] : [];
+          bandeja.unshift({
+            id: json.id_permiso || `PERM-${Date.now()}`,
+            kind: 'permiso',
+            empleado: '(Tú)',
+            motivo,
+            rango,
+            adjuntos: filesArr.map((f) => ({ name: f.name, size: f.size })),
+            estatus: json.estatus || 'Pendiente',
+            goce,
+            tipo,
+            modalidad,
+          });
+          renderBandeja();
+        }
+
+        if (typeof syncPermisosRestantes === 'function') {
+          window.PERMISOS_RESTANTES = Math.max(
+            0,
+            (window.PERMISOS_RESTANTES || 0) - 1
+          );
+          syncPermisosRestantes();
+        }
+
+        toast('Solicitud de permiso enviada');
+      } catch (err) {
+        console.error(err);
+        toast('No se pudo enviar la solicitud. Verifica tu conexión.');
+      } finally {
+        setLoading(false);
+      }
+    });
+  })();
+
+  // ====== Envío: Incidencia ======
+  document.getElementById('formIncidencia')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const f = e.currentTarget;
+    const fd = new FormData(f);
+
+    const categoria = fd.get('categoria');
+    const fecha = fd.get('fecha');
+    const descripcion = (fd.get('descripcion') || '').trim();
+    const impacto = fd.get('impacto');
+    const ubicacion = fd.get('ubicacion');
+
+    if (!categoria || !fecha || !descripcion || !impacto) {
+      toast('Revisa los campos requeridos');
+      return;
+    }
+
+    const files = document.getElementById('incFiles').files;
+    const adjuntos = [...files].map((f) => ({ name: f.name, size: f.size }));
+    const id = `INCI-${Date.now()}`;
+
+    bandeja.push({
+      id,
+      kind: 'incidencia',
+      empleado: '(Tú)',
+      descripcion,
+      fecha,
+      adjuntos,
+      ubicacion,
+      impacto,
+      estatus: 'En revisión',
+      categoria,
+    });
+
+    renderBandeja();
+
+    // Backend real (ejemplo):
+    /*
+    const res = await fetch('/incidencias', { method:'POST', body: fd });
+    const json = await res.json();
+    */
+
+    document.getElementById('dlgIncidencia').close();
+    f.reset();
+    document.getElementById('incPreview').innerHTML = '';
+    toast('Incidencia reportada');
+  });
 </script>
+
+
+
+
+<script>
+  (function () {
+    const selModalidad = document.getElementById('permModalidad');
+    const fechas = document.getElementById('permFechas');
+    const horas = document.getElementById('permHoras');
+    const count = document.getElementById('permCount');
+    const txtMotivo = document.querySelector('textarea[name="motivo"]');
+
+    function toggle() {
+      const v = selModalidad.value;
+      if (v === 'por-horas') {
+        horas.classList.remove('hidden');
+      } else {
+        horas.classList.add('hidden');
+      }
+    }
+
+    if (selModalidad) {
+      selModalidad.addEventListener('change', toggle);
+      toggle();
+    }
+
+    if (txtMotivo && count) {
+      const max = parseInt(txtMotivo.getAttribute('maxlength') || '300', 10);
+      function upd() {
+        count.textContent = (txtMotivo.value.length) + '/' + max;
+      }
+      txtMotivo.addEventListener('input', upd);
+      upd();
+    }
+  })();
+</script>
+
 
 
 
