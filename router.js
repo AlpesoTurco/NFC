@@ -1,6 +1,7 @@
 const { Router } = require('express');
 const router = Router();
 const requireAuthView = require('./middlewares/requireAuthView');
+const requireRoles = require('./middlewares/roles');
 const connections = require('./database/db');
 
 /** Helper: wrap async to evitar try/catch repetido */
@@ -17,12 +18,17 @@ const renderRoute = (path, view, middlewares = []) => {
   );
 };
 
+
+
+
 /* ========= RUTAS PÚBLICAS ========= */
 renderRoute('/login', 'login'); 
 renderRoute('/', 'login'); 
 
 /* ========= RUTAS PROTEGIDAS ========= */
 const auth = [requireAuthView];
+const adminOnly = [requireAuthView, requireRoles('admin')];
+const adminOrProv = [requireAuthView, requireRoles('usuario')];
 
 
 // Dispositivos, Actividad, Configuración, Nuevo Usuario, Perfil
@@ -264,6 +270,45 @@ router.get('/api/actividad/mia', auth, async (req, res) => {
   }
 });
 
+function parseFilters(query) {
+  const page = Math.max(parseInt(query.page || '1', 10), 1);
+  const perPage = Math.min(Math.max(parseInt(query.perPage || '20', 10), 1), 100);
+
+  const range = (query.range || '24h');
+  const now = new Date();
+  let hasta = new Date(now);
+  let desde = new Date(now);
+
+  if (query.desde && query.hasta) {
+    const d = new Date(query.desde + 'T00:00:00');
+    const h = new Date(query.hasta + 'T23:59:59');
+    if (!isNaN(d) && !isNaN(h)) { desde = d; hasta = h; }
+  } else {
+    if (range === 'hoy')    { desde.setHours(0,0,0,0); }
+    if (range === '24h')    { desde.setHours(desde.getHours() - 24); }
+    if (range === 'semana') {
+      const dow = (desde.getDay() + 6) % 7; // 0 = Lunes
+      desde.setDate(desde.getDate() - dow);
+      desde.setHours(0,0,0,0);
+      hasta = new Date(desde);
+      hasta.setDate(desde.getDate() + 6);
+      hasta.setHours(23,59,59,999);
+    }
+    if (range === 'mes')    { desde.setMonth(desde.getMonth() - 1); }
+  }
+
+  const fmt = (d)=> d.toISOString().slice(0,19).replace('T',' ');
+  return {
+    q: (query.q || '').trim(),
+    tipo: (query.tipo || '').trim(),
+    estado: (query.estado || '').trim(),
+    device: (query.device || '').trim(),
+    range,
+    desde: fmt(desde),
+    hasta: fmt(hasta),
+    page, perPage, offset: (page-1)*perPage
+  };
+}
 
 /* -------------------- API: Dispositivos (combo) -------------------- */
 router.get('/api/dispositivos', auth, async (req, res) => {
@@ -322,6 +367,204 @@ router.get('/actividad', auth, async (req, res) => {
   }
 });
 
+// Helpers (usa tu misma buildWhere ya existente en tu proyecto)
+function parseFilters(query) {
+  const page = Math.max(parseInt(query.page || '1', 10), 1);
+  const perPage = Math.min(Math.max(parseInt(query.perPage || '20', 10), 1), 100);
+
+  const range = (query.range || '24h');
+  const now = new Date();
+  let hasta = new Date(now);
+  let desde = new Date(now);
+
+  // Prioridad: rango manual de fechas
+  if (query.desde && query.hasta) {
+    const d = new Date(query.desde + 'T00:00:00');
+    const h = new Date(query.hasta + 'T23:59:59');
+    if (!isNaN(d) && !isNaN(h)) { desde = d; hasta = h; }
+  } else {
+    // Si no hay desde/hasta, usamos el select "range"
+    if (range === 'hoy')    { desde.setHours(0,0,0,0); }
+    if (range === '24h')    { desde.setHours(desde.getHours() - 24); }
+    if (range === 'semana') {
+      const dow = (desde.getDay() + 6) % 7; // 0 = lunes
+      desde.setDate(desde.getDate() - dow);
+      desde.setHours(0,0,0,0);
+      hasta = new Date(desde);
+      hasta.setDate(desde.getDate() + 6);
+      hasta.setHours(23,59,59,999);
+    }
+    if (range === 'mes')    { desde.setMonth(desde.getMonth() - 1); }
+  }
+
+  const fmt = (d)=> d.toISOString().slice(0,19).replace('T',' ');
+  return {
+    q: (query.q || '').trim(),
+    tipo: (query.tipo || '').trim(),
+    estado: (query.estado || '').trim(),
+    device: (query.device || '').trim(),
+    range,
+    desde: fmt(desde),
+    hasta: fmt(hasta),
+    page, perPage, offset: (page-1)*perPage
+  };
+}
+
+// buildWhere debe existir (esta es la misma versión que ya usas)
+function buildWhere(f, onlyUserId = null) {
+  const where = [];
+  const params = [];
+
+  if (onlyUserId != null) { where.push('id_usuario = ?'); params.push(onlyUserId); }
+  if (f.q) {
+    where.push(`(
+      empleado LIKE CONCAT('%', ?, '%')
+      OR puesto LIKE CONCAT('%', ?, '%')
+      OR device_name LIKE CONCAT('%', ?, '%')
+      OR motivo LIKE CONCAT('%', ?, '%')
+      OR CAST(audit_id AS CHAR) LIKE CONCAT('%', ?, '%')
+    )`);
+    params.push(f.q, f.q, f.q, f.q, f.q);
+  }
+  if (f.tipo)   { where.push('evento = ?'); params.push(f.tipo); }
+  if (f.estado) { where.push('estado = ?'); params.push(f.estado); }
+  if (f.device) { where.push('device_id = ?'); params.push(f.device); }
+
+  where.push('fecha BETWEEN ? AND ?'); params.push(f.desde, f.hasta);
+
+  return { whereSql: where.length ? ('WHERE ' + where.join(' AND ')) : '', params };
+}
+
+// ================== RUTA: Vista /actividad ==================
+router.get('/actividad', auth, async (req, res) => {
+  const f = parseFilters(req.query);              // <-- AHORA sí definimos f
+  const { whereSql, params } = buildWhere(f);     // usa tus filtros
+
+  try {
+    const rows = await q(
+      `SELECT * FROM vw_actividad_reciente
+       ${whereSql}
+       ORDER BY fecha DESC
+       LIMIT ? OFFSET ?;`,
+      [...params, f.perPage, f.offset]
+    );
+
+    const countRows = await q(
+      `SELECT COUNT(*) AS total
+       FROM vw_actividad_reciente
+       ${whereSql};`,
+      params
+    );
+    const total = countRows?.[0]?.total || 0;
+
+    const items = rows.map(r => ({
+      id: r.id_evento,
+      empleado: r.empleado,
+      puesto: r.puesto || '',
+      avatar: '/img/user-placeholder.jpg',
+      evento: r.evento,
+      fecha: r.fecha,
+      deviceId: r.device_id,
+      deviceName: r.device_name,
+      metodo: r.metodo,
+      estado: r.estado,
+      motivo: r.motivo,
+      ubicacion: r.ubicacion,
+      operador: r.operador,
+      auditId: String(r.audit_id),
+    }));
+
+    res.render('actividad', {
+      seed: { items, total, page: f.page, perPage: f.perPage },
+      user: req.user || null
+    });
+  } catch (err) {
+    console.error('GET /actividad', err);
+    res.status(500).send('Error al cargar actividad');
+  }
+});
+
+router.get('/api/actividad/export.csv', auth, async (req, res) => {
+  const f = parseFilters(req.query);
+  const { whereSql, params } = buildWhere(f);
+
+  const sql = `
+    SELECT
+      id_evento     AS id,
+      empleado,
+      COALESCE(puesto, '') AS puesto,
+      evento,
+      DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha,
+      device_id     AS deviceId,
+      device_name   AS deviceName,
+      metodo,
+      estado,
+      COALESCE(motivo,'')    AS motivo,
+      COALESCE(ubicacion,'') AS ubicacion,
+      COALESCE(operador,'')  AS operador,
+      CAST(audit_id AS CHAR) AS auditId
+    FROM vw_actividad_reciente
+    ${whereSql}
+    ORDER BY fecha DESC;
+  `;
+
+  try {
+    const rows = await q(sql, params);
+    const headers = ['id','empleado','puesto','evento','fecha','deviceId','deviceName','metodo','estado','motivo','ubicacion','operador','auditId'];
+    const esc = (v='') => `"${String(v ?? '').replace(/"/g,'""').replace(/\r?\n/g,' ')}"`;
+    const csv = ['\uFEFF' + headers.join(','), ...rows.map(r => headers.map(h => esc(r[h])).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    const fn = `actividad_${f.range}_${new Date().toISOString().slice(0,10)}.csv`;
+    res.setHeader('Content-Disposition', `attachment; filename="${fn}"`);
+    res.status(200).send(csv);
+  } catch (err) {
+    console.error('GET /api/actividad/export.csv', err);
+    res.status(500).json({ ok:false, error:'Error al exportar CSV' });
+  }
+});
+
+
+// === Exportar Actividad a CSV ===
+router.get('/api/actividad/export.csv', auth, async (req, res) => {
+  const f = parseFilters(req.query);                // usa tu parseFilters
+  const { whereSql, params } = buildWhere(f);       // y tus filtros
+
+  const sql = `
+    SELECT
+      id_evento     AS id,
+      empleado,
+      COALESCE(puesto, '') AS puesto,
+      evento,
+      DATE_FORMAT(fecha, '%Y-%m-%d %H:%i:%s') AS fecha,
+      device_id     AS deviceId,
+      device_name   AS deviceName,
+      metodo,
+      estado,
+      COALESCE(motivo,'')    AS motivo,
+      COALESCE(ubicacion,'') AS ubicacion,
+      COALESCE(operador,'')  AS operador,
+      CAST(audit_id AS CHAR) AS auditId
+    FROM vw_actividad_reciente
+    ${whereSql}
+    ORDER BY fecha DESC;
+  `;
+
+  try {
+    const rows = await q(sql, params);
+    const headers = ['id','empleado','puesto','evento','fecha','deviceId','deviceName','metodo','estado','motivo','ubicacion','operador','auditId'];
+    const esc = (v='') => `"${String(v ?? '').replace(/"/g,'""').replace(/\r?\n/g,' ')}"`;
+    const csv = ['\uFEFF' + headers.join(','), ...rows.map(r => headers.map(h => esc(r[h])).join(','))].join('\n');
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    const fn = `actividad_${f.range}_${new Date().toISOString().slice(0,10)}.csv`;
+    res.setHeader('Content-Disposition', `attachment; filename="${fn}"`);
+    res.status(200).send(csv);
+  } catch (err) {
+    console.error('GET /api/actividad/export.csv', err);
+    res.status(500).json({ ok:false, error:'Error al exportar CSV' });
+  }
+});
 
 
 

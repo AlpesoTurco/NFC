@@ -22,7 +22,7 @@ login_controller.post('/auth', (req, res) => {
   }
 
   const sql = `
-    SELECT id_usuario, nombre, apellido_paterno, apellido_materno, correo, sexo
+    SELECT id_usuario, tipo_usuario, nombre, apellido_paterno, apellido_materno, correo, sexo
     FROM usuarios
     WHERE correo = ? AND password = ?
     LIMIT 1
@@ -63,7 +63,8 @@ login_controller.post('/auth', (req, res) => {
         correo: user.correo,
         nombre: user.nombre,
         apellido_paterno: user.apellido_paterno,
-        apellido_materno: user.apellido_materno
+        apellido_materno: user.apellido_materno,
+        tipo_usuario: user.tipo_usuario
       },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }

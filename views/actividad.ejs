@@ -131,13 +131,50 @@
       </footer>
     </div>
   </dialog>
+
+  <!-- Diálogo Exportar CSV -->
+  <dialog id="dlgExport" class="rounded-2xl backdrop:bg-black/40 w-full max-w-md p-0">
+    <form method="dialog" class="bg-white rounded-2xl overflow-hidden">
+      <header class="px-5 py-4 border-b border-gray-200">
+        <h4 class="text-lg font-semibold text-gray-900">Exportar CSV</h4>
+        <p class="text-sm text-gray-500">Elige el rango para exportar.</p>
+      </header>
+      <div class="p-5 space-y-4 text-sm">
+        <label class="flex items-center gap-2">
+          <input type="radio" name="expMode" value="vista" checked>
+          <span>Usar el select “Rango” actual</span>
+        </label>
+        <label class="flex items-center gap-2">
+          <input type="radio" name="expMode" value="semana">
+          <span>Semana actual (Lun–Dom)</span>
+        </label>
+        <label class="flex items-start gap-2">
+          <input type="radio" name="expMode" value="fechas">
+          <span class="w-full">
+            Por fechas
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <input id="expDesde" type="date" class="w-full rounded-lg border border-gray-200 px-3 py-2">
+              <input id="expHasta" type="date" class="w-full rounded-lg border border-gray-200 px-3 py-2">
+            </div>
+            <small class="text-gray-500">Incluye ambos días (00:00–23:59).</small>
+          </span>
+        </label>
+      </div>
+      <footer class="px-5 py-4 border-t border-gray-200 flex items-center justify-end gap-2">
+        <button type="button" id="expCancel" class="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
+        <button type="button" id="expOk" class="px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700">Exportar</button>
+      </footer>
+    </form>
+  </dialog>
 </section>
+
+
 
 <script>
 /* ======= Estado ======= */
 let DATA = SEED.items || [];
-let TOTAL = SEED.total || 0;   // lo conservamos por si tu API lo ocupa
-let page  = SEED.page  || 1;   // idem
+let TOTAL = SEED.total || 0;
+let page  = SEED.page  || 1;
 let size  = SEED.perPage || 20;
 
 let q = '', range = '24h', tipo = '', estado = '', device = '';
@@ -279,16 +316,49 @@ $('#btnClear').addEventListener('click', ()=>{
 
 $('#btnRefresh').addEventListener('click', refresh);
 
-/* ======= Export CSV ======= */
-$('#btnExport').addEventListener('click', ()=>{
-  const rows = DATA;
-  const csv = ['id,empleado,puesto,evento,fecha,deviceId,deviceName,metodo,estado,motivo,ubicacion,operador,auditId']
-    .concat(rows.map(r => [
-      r.id, r.empleado, r.puesto || '', r.evento, r.fecha, r.deviceId, r.deviceName, r.metodo, r.estado, (r.motivo||''), (r.ubicacion||''), (r.operador||''), (r.auditId||'')
-    ].map(v => `"${String(v ?? '').replace(/"/g,'""')}"`).join(',')))
-    .join('\n');
-  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'actividad.csv'; a.click();
+/* ======= Export CSV (con semana/fechas) ======= */
+const dlgExport = document.getElementById('dlgExport');
+const expOk     = document.getElementById('expOk');
+const expCancel = document.getElementById('expCancel');
+
+$('#btnExport').addEventListener('click', () => {
+  // Prefill de fechas: por UX, setea semana actual por defecto
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7; // 0 = Lunes
+  const monday = new Date(today); monday.setDate(today.getDate() - dow);
+  const sunday = new Date(monday); sunday.setDate(monday.getDate() + 6);
+  const toISO = d => d.toISOString().slice(0,10);
+  $('#expDesde').value = toISO(monday);
+  $('#expHasta').value = toISO(sunday);
+
+  dlgExport.showModal();
+});
+
+expCancel?.addEventListener('click', () => dlgExport.close());
+
+expOk?.addEventListener('click', () => {
+  const mode = document.querySelector('input[name="expMode"]:checked')?.value || 'vista';
+
+  const params = new URLSearchParams({
+    // Reusa filtros actuales
+    q, tipo, estado, device
+  });
+
+  if (mode === 'vista') {
+    params.set('range', $('#fRange')?.value || '24h');
+  } else if (mode === 'semana') {
+    params.set('range', 'semana');
+  } else if (mode === 'fechas') {
+    const desde = $('#expDesde')?.value;
+    const hasta = $('#expHasta')?.value;
+    if (!desde || !hasta) { alert('Selecciona ambas fechas.'); return; }
+    params.set('desde', desde);
+    params.set('hasta', hasta);
+  }
+
+  dlgExport.close();
+  // Si quieres sólo "mi actividad", usa /api/actividad/mia/export.csv
+  window.location.href = `/api/actividad/export.csv?${params.toString()}`;
 });
 
 /* ======= Poblar dispositivos ======= */
@@ -320,7 +390,6 @@ document.addEventListener('click', (e) => {
   if (!btn) return;
 
   const id = btn.dataset.id;
-  // Busca el registro en la DATA actual (por id o id_evento como fallback)
   const rec = DATA.find(r => String(r.id ?? r.id_evento) === String(id));
 
   if (!rec) {

@@ -33,6 +33,9 @@ function statusFromAction(action) {
   return null;
 }
 
+
+
+
 /**
  * POST /api/solicitudes/:kind/:id/:action
  *   kind: permiso | incidencia

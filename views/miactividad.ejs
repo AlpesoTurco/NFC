@@ -461,6 +461,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
 //paro aprobar o rechazar
 document.addEventListener('click', async (e) => {
   const a = e.target.closest('[data-approve]');
@@ -1122,6 +1123,49 @@ document.addEventListener('click', async (e) => {
   })();
 
 </script>
+
+<script>
+/* ======= Export CSV (server) ======= */
+(function () {
+  const btnExport = document.getElementById('btnExport');
+  if (!btnExport) return;
+
+  btnExport.addEventListener('click', (e) => {
+    // Tomamos valores de los filtros de esta misma página
+    const qEl      = document.getElementById('fQ');
+    const rEl      = document.getElementById('fRange');
+    const tipoEl   = document.getElementById('fTipo');
+    const estadoEl = document.getElementById('fEstado');
+    const devEl    = document.getElementById('fDevice');
+
+    const params = new URLSearchParams({
+      q:       (qEl?.value || '').trim(),
+      tipo:    (tipoEl?.value || '').trim(),
+      estado:  (estadoEl?.value || '').trim(),
+      device:  (devEl?.value || '').trim()
+    });
+
+    if (e.shiftKey) {
+      // SHIFT + click => por fechas (pedimos YYYY-MM-DD)
+      const desde = prompt('Desde (YYYY-MM-DD):');
+      const hasta = prompt('Hasta (YYYY-MM-DD):');
+      if (!desde || !hasta) return;
+      params.set('desde', desde);
+      params.set('hasta', hasta);
+    } else if (e.altKey) {
+      // ALT + click => semana actual (Lun-Dom)
+      params.set('range', 'semana');
+    } else {
+      // Click normal => usa el select Rango actual
+      params.set('range', rEl?.value || '24h');
+    }
+
+    // Dispara la descarga desde el backend
+    window.location.href = `/api/actividad/export.csv?${params.toString()}`;
+  });
+})();
+</script>
+
 
 
 
